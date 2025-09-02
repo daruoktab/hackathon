@@ -40,3 +40,7 @@ def insert_invoice_data(session, invoice_data, image_path):
         print(f"Error inserting invoice data: {e}")
         session.rollback()
 
+def get_all_invoices(session):
+    """Retrieves all invoices from the database."""
+    return session.query(Invoice).all()
+

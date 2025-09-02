@@ -1,19 +1,14 @@
-
 import os
-from google.generativeai.client import configure
-from google.generativeai.generative_models import GenerativeModel
-from dotenv import load_dotenv
+import re
+import json
+import pytesseract
 from PIL import Image
 from pdf2image import convert_from_path
 
-load_dotenv()
-
-# Configure the Gemini API
-if "GEMINI_API_KEY" not in os.environ:
-    print("Please set the GEMINI_API_KEY environment variable in a .env file.")
-    exit(1)
-
-configure(api_key=os.environ["GEMINI_API_KEY"])
+# If Tesseract is not in your PATH, include the following line
+# pytesseract.pytesseract.tesseract_cmd = r'<full_path_to_your_tesseract_executable>'
+# Example for Windows:
+# pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 
 def pdf_to_images(pdf_path):
@@ -26,28 +21,26 @@ def pdf_to_images(pdf_path):
 
 
 def extract_invoice_data_from_image(image):
-    """Extracts invoice data from a single image using Gemini."""
-    model = GenerativeModel('gemini-2.5-flash-lite')
-    prompt = """
-    You are an expert in invoice data extraction.
-    Extract the following information from the invoice image:
-    - Invoice Number
-    - Invoice Date
-    - Total Amount
-
-    Return the extracted information in a JSON format.
-    Example:
-    {
-        "invoice_number": "12345",
-        "invoice_date": "2024-01-01",
-        "total_amount": "100.00"
-    }
-    """
+    """Extracts invoice data from a single image using Tesseract OCR."""
     try:
-        response = model.generate_content([prompt, image])
-        return response.text
+        # Use Tesseract to extract text from the image
+        text = pytesseract.image_to_string(image)
+
+        # Use regular expressions to find invoice details
+        invoice_number_match = re.search(r'(?i)invoice\s*no[:\s#]*\s*([a-z0-9\-]+)', text)
+        invoice_date_match = re.search(r'(?i)date[:\s]*\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})', text)
+        total_amount_match = re.search(r'(?i)total\s*amount[:\s\$]*\s*([\d,]+\.\d{2})', text)
+
+        invoice_data = {
+            "invoice_number": invoice_number_match.group(1) if invoice_number_match else None,
+            "invoice_date": invoice_date_match.group(1) if invoice_date_match else None,
+            "total_amount": total_amount_match.group(1).replace(',', '') if total_amount_match else None,
+        }
+
+        return json.dumps(invoice_data, indent=4)
+
     except Exception as e:
-        print(f"Error during Gemini API call: {e}")
+        print(f"Error during OCR processing: {e}")
         return None
 
 
@@ -63,8 +56,7 @@ def process_invoice(file_path):
         images = pdf_to_images(file_path)
         if not images:
             return None
-        # For simplicity, we'll only process the first page of the PDF.
-        # You can loop through all images if needed.
+        # Process the first page of the PDF.
         return extract_invoice_data_from_image(images[0])
     elif file_extension in ['.jpg', '.jpeg', '.png']:
         try:
