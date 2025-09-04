@@ -1,4 +1,3 @@
-google-generativeai
 python-dotenv
 Pillow
 pdf2image
@@ -6,3 +5,4 @@ SQLAlchemy
 groq
 pytesseract
 pandas
+lxml

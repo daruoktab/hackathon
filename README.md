@@ -4,20 +4,21 @@ A powerful Invoice Retrieval-Augmented Generation (RAG) system that uses OCR and
 
 ## Features
 
-- **PDF & Image Processing**: Supports both PDF invoices and image files (JPG, JPEG, PNG)
-- **AI-Powered OCR**: Uses Google Gemini AI for intelligent invoice data extraction
+- **PDF & Image Processing**: Supports both PDF invoices and image files (JPG, JPEG, PNG).
+- **Tesseract OCR**: Uses Tesseract for invoice data extraction.
+- **AI-Powered Financial Analysis**: Leverages Groq and Llama 3 to generate financial suggestions and reports.
 - **Structured Data Extraction**: Automatically extracts key invoice information:
   - Invoice Number
   - Invoice Date
   - Total Amount
-- **Database Storage**: SQLite database for storing and querying invoice data
-- **RAG Capabilities**: Advanced querying and retrieval of invoice information
+- **Database Storage**: SQLite database for storing and querying invoice data.
+- **Command-Line Search**: A command-line interface to search for invoices.
 
 ## Prerequisites
 
 - Python 3.8+
-- Google Gemini API key
-- Required system dependencies for PDF processing
+- Groq API key
+- Tesseract OCR engine
 
 ## Installation
 
@@ -27,50 +28,59 @@ A powerful Invoice Retrieval-Augmented Generation (RAG) system that uses OCR and
    cd hackathon/invoice_rag
    ```
 
-2. **Install dependencies:**
+2. **Install Tesseract:**
+   Follow the installation instructions for your operating system from the [official Tesseract documentation](https://tesseract-ocr.github.io/tessdoc/Installation.html).
+
+3. **Install dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Set up environment variables:**
+4. **Set up environment variables:**
    Create a `.env` file in the `invoice_rag` directory:
    ```env
-   GEMINI_API_KEY=your_gemini_api_key_here
+   GROQ_API_KEY=your_groq_api_key_here
    ```
 
 ## Usage
 
-### Basic Invoice Processing
+### Processing Invoices and Generating Reports
 
-```python
-from src.ocr import process_invoice
+The `main.py` script is the primary entry point for processing invoices and generating financial analysis. When you run it, it will:
 
-# Process a PDF invoice
-result = process_invoice("path/to/invoice.pdf")
+1.  Scan the `invoice_rag/invoices` directory for new invoice files.
+2.  Process each invoice using Tesseract OCR to extract key data.
+3.  Store the extracted data in the `invoices.db` SQLite database.
+4.  Use the Groq API and Llama 3 to generate:
+    -   Financial suggestions based on the invoice data.
+    -   A monthly financial report.
 
-# Process an image invoice
-result = process_invoice("path/to/invoice.jpg")
-```
-
-### Database Operations
-
-```python
-from src.database import InvoiceDatabase
-
-# Initialize database
-db = InvoiceDatabase()
-
-# Add invoice data
-db.add_invoice(invoice_data)
-
-# Query invoices
-results = db.query_invoices("invoice_number = '12345'")
-```
-
-### Running the Main Application
+To run the main application:
 
 ```bash
 python src/main.py
+```
+
+### Searching for Invoices
+
+The `query.py` script provides a command-line interface to search for invoices in the database.
+
+**Search by keyword (default):**
+
+```bash
+python src/query.py "search term"
+```
+
+**Search by invoice number:**
+
+```bash
+python src/query.py "INV-001" --by number
+```
+
+**Search by date:**
+
+```bash
+python src/query.py "2025-09-04" --by date
 ```
 
 ## Project Structure
@@ -82,7 +92,7 @@ invoice_rag/
 │   ├── main.py          # Main application entry point
 │   ├── ocr.py           # OCR and invoice processing
 │   ├── database.py      # Database operations
-│   └── query.py         # Query interface
+│   └── query.py         # Command-line search interface
 ├── invoices/            # Directory for invoice files
 ├── invoices.db          # SQLite database
 ├── requirements.txt     # Python dependencies
@@ -93,13 +103,13 @@ invoice_rag/
 
 ### `process_invoice(file_path)`
 
-Processes an invoice file and extracts structured data.
+Processes an invoice file and extracts structured data using Tesseract OCR.
 
 **Parameters:**
 - `file_path` (str): Path to the invoice file (PDF or image)
 
 **Returns:**
-- JSON string containing extracted invoice data or None if processing fails
+- JSON string containing extracted invoice data or None if processing fails.
 
 **Supported Formats:**
 - PDF files (.pdf)
@@ -107,35 +117,28 @@ Processes an invoice file and extracts structured data.
 
 ### `extract_invoice_data_from_image(image)`
 
-Extracts invoice data from a PIL Image using Gemini AI.
+Extracts invoice data from a PIL Image using Tesseract OCR.
 
 **Parameters:**
 - `image` (PIL.Image): Image object to process
 
 **Returns:**
-- JSON string with extracted invoice information
+- JSON string with extracted invoice information.
 
 ## Configuration
 
-### Gemini AI Model
-
-The system uses `gemini-2.5-flash-lite` for optimal performance and cost-effectiveness. You can modify the model in `src/ocr.py`:
-
-```python
-model = GenerativeModel('gemini-2.5-flash-lite')
-```
-
 ### Environment Variables
 
-- `GEMINI_API_KEY`: Your Google Gemini API key (required)
+- `GROQ_API_KEY`: Your Groq API key (required).
 
 ## Dependencies
 
-- `google-generativeai`: Google Gemini AI integration
+- `groq`: Groq API integration
 - `python-dotenv`: Environment variable management
 - `Pillow`: Image processing
 - `pdf2image`: PDF to image conversion
 - `SQLAlchemy`: Database ORM
+- `pytesseract`: Python wrapper for Tesseract OCR
 
 ## Contributing
 
