@@ -1,166 +1,144 @@
-# Invoice RAG System
+# 🧾 Invoice Processing System
 
-A powerful Invoice Retrieval-Augmented Generation (RAG) system that uses OCR and AI to extract, process, and query invoice data efficiently.
+An AI-powered invoice processing system that extracts structured data from invoice images, stores it in a database, performs financial analysis, and provides AI-generated financial advice.
 
-## Features
+## 🚀 Features
 
-- **PDF & Image Processing**: Supports both PDF invoices and image files (JPG, JPEG, PNG).
-- **Tesseract OCR**: Uses Tesseract for invoice data extraction.
-- **AI-Powered Financial Analysis**: Leverages Groq and Llama 3 to generate financial suggestions and reports.
-- **Structured Data Extraction**: Automatically extracts key invoice information:
-  - Invoice Number
-  - Invoice Date
-  - Total Amount
-- **Database Storage**: SQLite database for storing and querying invoice data.
-- **Command-Line Search**: A command-line interface to search for invoices.
+- **📷 AI Vision Processing**: Extract data from invoice images using Groq LLM
+- **✅ Data Validation**: Pydantic models ensure data quality and type safety  
+- **💾 Database Storage**: SQLite database with relational schema
+- **📊 Financial Analysis**: Weekly spending analysis, trends, and insights
+- **🧠 AI Financial Advisor**: Personalized budget recommendations
+- **🔍 Advanced Search**: Query and filter stored invoices
 
-## Prerequisites
+## � Project Structure
 
-- Python 3.8+
-- Groq API key
-- Tesseract OCR engine
+```
+hackathon/
+├── invoice_rag/           # Main invoice processing system
+│   ├── src/
+│   │   ├── main.py        # Core processing pipeline
+│   │   ├── database.py    # SQLAlchemy ORM models
+│   │   ├── models.py      # Pydantic validation schemas
+│   │   ├── analysis.py    # Financial analysis engine
+│   │   ├── query.py       # Search interface
+│   │   └── ocr.py        # Text extraction utilities
+│   ├── view_database.py   # Database viewer script
+│   ├── testgroq.py       # Original LLM prototype
+│   ├── requirements.txt   # Dependencies
+│   ├── .env.example      # Environment template
+│   └── README.md         # Detailed documentation
+├── test1.jpg             # Sample invoice images
+├── test2.jpg
+├── test3.jpg
+├── test4.jpg
+└── README.md             # This file
+```
 
-## Installation
+## 🛠️ Quick Start
 
-1. **Clone the repository:**
+1. **Navigate to the invoice system**
    ```bash
-   git clone https://github.com/daruoktab/hackathon.git
-   cd hackathon/invoice_rag
+   cd invoice_rag
    ```
 
-2. **Install Tesseract:**
-   Follow the installation instructions for your operating system from the [official Tesseract documentation](https://tesseract-ocr.github.io/tessdoc/Installation.html).
-
-3. **Install dependencies:**
+2. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Set up environment variables:**
-   Create a `.env` file in the `invoice_rag` directory:
-   ```env
-   GROQ_API_KEY=your_groq_api_key_here
+3. **Set up environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your GROQ_API_KEY
    ```
 
-## Usage
+4. **Process invoices**
+   ```python
+   from src.main import process_single_image
+   result = process_single_image('../test1.jpg')
+   ```
 
-### Processing Invoices and Generating Reports
+5. **View results**
+   ```bash
+   python view_database.py
+   ```
 
-The `main.py` script is the primary entry point for processing invoices and generating financial analysis. When you run it, it will:
+## 🔄 System Flow
 
-1.  Scan the `invoice_rag/invoices` directory for new invoice files.
-2.  Process each invoice using Tesseract OCR to extract key data.
-3.  Store the extracted data in the `invoices.db` SQLite database.
-4.  Use the Groq API and Llama 3 to generate:
-    -   Financial suggestions based on the invoice data.
-    -   A monthly financial report.
+```
+Invoice Image → LLM Processing → Pydantic Validation → Database Storage → Analysis → AI Advice
+```
 
-To run the main application:
+## � Usage Examples
 
+### Process Invoice
+```python
+from src.main import process_single_image
+result = process_single_image('path/to/invoice.jpg')
+```
+
+### View Database
 ```bash
-python src/main.py
+python view_database.py
 ```
 
-### Searching for Invoices
+### Search Invoices
+```python
+from src.query import InvoiceSearcher
+from src.database import get_db_session
 
-The `query.py` script provides a command-line interface to search for invoices in the database.
-
-**Search by keyword (default):**
-
-```bash
-python src/query.py "search term"
+session = get_db_session()
+searcher = InvoiceSearcher(session)
+results = searcher.search_invoices(shop_name="Indomaret")
 ```
 
-**Search by invoice number:**
-
-```bash
-python src/query.py "INV-001" --by number
+### Financial Analysis
+```python
+from src.analysis import analyze_weekly_spending
+analysis = analyze_weekly_spending(session)
 ```
 
-**Search by date:**
+## 📊 Key Features
 
-```bash
-python src/query.py "2025-09-04" --by date
-```
+- **AI-Powered**: Uses Groq's Meta-llama model for accurate data extraction
+- **Validated Data**: Pydantic schemas ensure data quality
+- **Relational Storage**: Proper database design with foreign key relationships
+- **Financial Insights**: Weekly averages, trends, and spending patterns
+- **Smart Advisor**: AI-generated financial advice based on spending data
 
-## Project Structure
+## 🔧 Configuration
 
-```
-invoice_rag/
-├── src/
-│   ├── __init__.py
-│   ├── main.py          # Main application entry point
-│   ├── ocr.py           # OCR and invoice processing
-│   ├── database.py      # Database operations
-│   └── query.py         # Command-line search interface
-├── invoices/            # Directory for invoice files
-├── invoices.db          # SQLite database
-├── requirements.txt     # Python dependencies
-└── .env                 # Environment variables (create this)
-```
+### Required Environment Variables
+- `GROQ_API_KEY` - Your Groq API key for LLM processing
 
-## API Reference
+### Supported Formats
+- JPG/JPEG images
+- PNG images
+- Indonesian invoice formats
 
-### `process_invoice(file_path)`
+## 📈 Analysis Capabilities
 
-Processes an invoice file and extracts structured data using Tesseract OCR.
+- Weekly spending averages
+- Spending trend identification (increasing/decreasing)
+- Biggest spending categories
+- Shop frequency analysis
+- Payment method preferences
+- AI-powered financial advice
 
-**Parameters:**
-- `file_path` (str): Path to the invoice file (PDF or image)
-
-**Returns:**
-- JSON string containing extracted invoice data or None if processing fails.
-
-**Supported Formats:**
-- PDF files (.pdf)
-- Image files (.jpg, .jpeg, .png)
-
-### `extract_invoice_data_from_image(image)`
-
-Extracts invoice data from a PIL Image using Tesseract OCR.
-
-**Parameters:**
-- `image` (PIL.Image): Image object to process
-
-**Returns:**
-- JSON string with extracted invoice information.
-
-## Configuration
-
-### Environment Variables
-
-- `GROQ_API_KEY`: Your Groq API key (required).
-
-## Dependencies
-
-- `groq`: Groq API integration
-- `python-dotenv`: Environment variable management
-- `Pillow`: Image processing
-- `pdf2image`: PDF to image conversion
-- `SQLAlchemy`: Database ORM
-- `pytesseract`: Python wrapper for Tesseract OCR
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+4. Submit a pull request
 
-## License
+## � License
 
-This project is open source and available under the [MIT License](LICENSE).
+This project is licensed under the MIT License.
 
-## Support
+## 📞 Support
 
-For issues and questions, please open an issue on the GitHub repository.
+For detailed documentation and usage examples, see the `invoice_rag/README.md` file.
 
-## Roadmap
-
-- [ ] Support for more invoice formats
-- [ ] Enhanced data extraction capabilities
-- [ ] Web interface
-- [ ] Batch processing
-- [ ] Export functionality
-- [ ] Advanced querying features
+For issues and questions, please open an issue in the repository.
