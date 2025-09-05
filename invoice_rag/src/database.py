@@ -46,8 +46,8 @@ class InvoiceItem(Base):
     def __repr__(self):
         return f"<InvoiceItem(name='{self.name}', total_price='{self.total_price}')>"
 
-def get_db_session(db_path='invoices.db'):
-    """Initializes the database and returns a session."""
+def get_db_session(db_path='../invoices.db'):
+    """Creates a database session with the specified database."""
     engine = create_engine(f'sqlite:///{db_path}')
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)

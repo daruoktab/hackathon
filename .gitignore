@@ -1,1 +1,15 @@
-.vscode/ 
+# IDE
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+
+# Temporary databases (keep main invoices.db)
+test*.db
+demo*.db
+temp*.db

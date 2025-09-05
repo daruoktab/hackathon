@@ -37,10 +37,14 @@ venv.bak/
 *.swo
 *~
 
-# Database files
-*.db
+# Database files (except main invoice database)
+test*.db
+demo*.db
 *.sqlite
 *.sqlite3
+
+# Main database is tracked - remove this line if you want to ignore it
+# invoices.db
 
 # Logs
 *.log
