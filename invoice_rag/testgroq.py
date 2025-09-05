@@ -175,7 +175,12 @@ def process_invoice_image(image_path, image_name):
         return None
 
 # List of images to process (one level up from current directory)
-image_files = ["../test1.jpg", "../test2.jpg", "../test3.jpg", "../test4.jpg"]
+image_files = [
+    os.path.join("..", "test1.jpg"),
+    os.path.join("..", "test2.jpg"), 
+    os.path.join("..", "test3.jpg"),
+    os.path.join("..", "test4.jpg")
+]
 image_names = ["test1.jpg", "test2.jpg", "test3.jpg", "test4.jpg"]
 
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
