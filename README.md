@@ -53,7 +53,7 @@ hackathon/
     │   ├── run.py                # 🏃 Simple runner script
     │   ├── cleanup.py            # 🧹 Database cleanup tool
     │   ├── testgroq.py          # 🧪 Groq API testing
-    │   └── view_database.py      # 👀 Database viewer (ASCII output)
+    │   └── view_database.py      # ��� Database viewer (ASCII output)
     │
     └── 📂 Data
         └── invoices/             # 📁 Input directory for invoice images
@@ -172,15 +172,13 @@ process_invoice_directory('invoices/')
 ## 🤖 AI Processing Pipeline
 
 ```mermaid
-graph LR
-    A[Invoice Image] --> B[Base64 Encoding]
-    B --> C[Groq LLM Processing]
-    C --> D[JSON Extraction]
-    D --> E[Pydantic Validation]
-    E --> F[Date/Time Standardization]
-    F --> G[SQLite Storage]
-    G --> H[Financial Analysis]
-    H --> I[Web Interface / API]
+graph TD
+    subgraph "Data Pipeline"
+        E[Pydantic Validation] --> F[Date/Time Standardization] --> G[SQLite Storage] --> H[Financial Analysis] --> I[Web Interface / API]
+    end
+    subgraph "Input Processing"
+        A[Invoice Image] --> B[Base64 Encoding] --> C[Groq LLM Processing] --> D[JSON Extraction]
+    end
 ```
 
 **Processing Features:**
