@@ -1,9 +1,22 @@
-python-dotenv
-Pillow
-pdf2image
-SQLAlchemy
-groq
-pytesseract
-pandas
-lxml
-pydantic
+# Core dependencies
+streamlit>=1.28.0
+pandas>=2.0.0
+numpy>=1.24.0
+pillow>=9.5.0
+plotly>=5.15.0
+
+# AI/ML dependencies
+groq>=0.4.0
+pydantic>=2.0.0
+
+# Database dependencies
+sqlalchemy>=2.0.0
+
+# Environment and utilities
+python-dotenv>=1.0.0
+
+# Image processing
+opencv-python>=4.8.0
+
+# Additional utilities
+requests>=2.31.0
