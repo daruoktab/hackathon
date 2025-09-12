@@ -8,9 +8,8 @@ import os
 import sys
 import sqlite3
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 import plotly.express as px
-import plotly.graph_objects as go
 from PIL import Image
 import json
 
@@ -19,6 +18,9 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.join(os.path.dirname(current_dir), 'src')
 sys.path.insert(0, src_dir)
 
+# Database path - use the main repo database
+REPO_DB_PATH = os.path.abspath(os.path.join(current_dir, '..', 'invoices.db'))
+
 try:
     from processor import process_invoice_with_llm, save_to_database_robust, create_tables
     from database import get_db_session, Invoice, InvoiceItem
@@ -26,6 +28,13 @@ try:
 except ImportError as e:
     st.error(f"Import error: {e}")
     IMPORTS_SUCCESS = False
+    # Define dummy functions to prevent errors
+    def process_invoice_with_llm(*args, **kwargs):
+        return None
+    def save_to_database_robust(*args, **kwargs):
+        return None
+    def create_tables(*args, **kwargs):
+        pass
 
 # Page configuration
 st.set_page_config(
@@ -795,7 +804,7 @@ def data_management_page():
                     st.experimental_rerun()
                 except Exception as e:
                     st.error(f"Error clearing data: {e}")
-
+                    st.rerun()
         if st.button("📋 View Database Schema"):
             try:
                 conn = sqlite3.connect('invoices.db')
@@ -847,7 +856,7 @@ def data_management_page():
             future_dates = (pd.to_datetime(invoices_df['processed_at']) > datetime.now()).sum();
 
             st.write(f"Negative amounts: {negative_amounts}")
-            st.write(f"Zero amounts: {zero_amounts}")
+            future_dates = (pd.to_datetime(invoices_df['processed_at']) > datetime.now()).sum()
             st.write(f"Future dates: {future_dates}")
 
 def search_and_filter_page():
