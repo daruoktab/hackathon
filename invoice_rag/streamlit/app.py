@@ -106,7 +106,7 @@ def init_database():
 def get_invoice_data():
     """Get invoice data from database"""
     try:
-        conn = sqlite3.connect('../invoices.db')
+        conn = sqlite3.connect(REPO_DB_PATH)
         invoices_df = pd.read_sql_query("""
             SELECT * FROM invoices 
             ORDER BY processed_at DESC
@@ -214,8 +214,8 @@ def upload_and_process_page():
         if uploaded_file is not None:
             # Display uploaded image
             image = Image.open(uploaded_file)
-            st.image(image, caption="Uploaded Invoice", use_column_width=True)
-            
+            st.image(image, caption="Uploaded Invoice", width='stretch')
+
             # Process button
             if st.button("🔄 Process Invoice", type="primary"):
                 invoice_data, temp_path = process_uploaded_image(uploaded_file)
@@ -249,7 +249,7 @@ def upload_and_process_page():
             if data.get('items'):
                 st.markdown("### 🛒 Items")
                 items_df = pd.DataFrame(data['items'])
-                st.dataframe(items_df, use_container_width=True)
+                st.dataframe(items_df, width='stretch')
         else:
             st.info("👆 Upload and process an invoice to see results here")
 
@@ -299,8 +299,8 @@ def dashboard_page():
             title='Daily Spending Trend',
             labels={'total_amount': 'Amount (Rp)', 'processed_at': 'Date'}
         )
-        st.plotly_chart(fig_line, use_container_width=True)
-    
+        st.plotly_chart(fig_line, width='stretch')
+
     with col2:
         # Top shops by spending
         top_shops = invoices_df.groupby('shop_name')['total_amount'].sum().nlargest(10).reset_index()
@@ -312,17 +312,17 @@ def dashboard_page():
             title='Top 10 Shops by Total Spending',
             labels={'total_amount': 'Total Amount (Rp)', 'shop_name': 'Shop Name'}
         )
-        st.plotly_chart(fig_bar, use_container_width=True)
-    
+        st.plotly_chart(fig_bar, width='stretch')
+
     # Recent activity
     st.subheader("📅 Recent Activity")
     recent_invoices = invoices_df.head(10)[['shop_name', 'total_amount', 'invoice_date', 'processed_at']]
-    st.dataframe(recent_invoices, use_container_width=True)
+    st.dataframe(recent_invoices, width='stretch')
 
 def get_detailed_invoice_data():
     """Get detailed invoice data with items for enhanced view"""
     try:
-        conn = sqlite3.connect('invoices.db')
+        conn = sqlite3.connect(REPO_DB_PATH)
 
         # Get invoices with item counts and totals
         detailed_query = """
@@ -543,11 +543,14 @@ def display_table_view(df):
         for col in display_df.columns:
             if 'processed_at' in col or 'date' in col.lower():
                 if display_df[col].dtype == 'object':
-                    display_df[col] = pd.to_datetime(display_df[col], errors='ignore')
+                    try:
+                        display_df[col] = pd.to_datetime(display_df[col])
+                    except (ValueError, TypeError):
+                        pass  # Keep original values if conversion fails
 
         st.dataframe(
             display_df,
-            use_container_width=True,
+            width='stretch',
             column_config={
                 "total_amount": st.column_config.TextColumn("Total Amount"),
                 "shop_name": st.column_config.TextColumn("Shop Name", width="medium"),
@@ -585,7 +588,7 @@ def display_card_view(df, items_df):
                     items_display = invoice_items[['item_name', 'quantity', 'unit_price', 'total_price']].copy()
                     items_display['unit_price'] = items_display['unit_price'].apply(lambda x: f"Rp {x:,.2f}")
                     items_display['total_price'] = items_display['total_price'].apply(lambda x: f"Rp {x:,.2f}")
-                    st.dataframe(items_display, use_container_width=True, hide_index=True)
+                    st.dataframe(items_display, width='stretch', hide_index=True)
 
 def display_detail_view(df, items_df):
     """Display invoices with full details"""
@@ -783,31 +786,63 @@ def data_management_page():
         st.subheader("📊 Database Overview")
         if not stats_df.empty:
             stats = stats_df.iloc[0]
-            st.write(f"**Total Invoices:** {stats['total_invoices']}")
-            st.write(f"**Total Items:** {stats['total_items']}")
-            st.write(f"**Unique Shops:** {stats['unique_shops']}")
-            st.write(f"**Total Amount:** Rp {stats['total_spent']:,.2f}")
-            st.write(f"**Date Range:** {stats['first_invoice']} to {stats['last_invoice']}")
+            st.write(f"**Total Invoices:** {stats['total_invoices'] or 0}")
+            st.write(f"**Total Items:** {stats['total_items'] or 0}")
+            st.write(f"**Unique Shops:** {stats['unique_shops'] or 0}")
+            total_spent = stats['total_spent'] or 0
+            st.write(f"**Total Amount:** Rp {total_spent:,.2f}")
+            first_invoice = stats['first_invoice'] or 'N/A'
+            last_invoice = stats['last_invoice'] or 'N/A'
+            st.write(f"**Date Range:** {first_invoice} to {last_invoice}")
 
     with col2:
         st.subheader("🔧 Database Actions")
 
-        if st.button("🗑️ Clear All Data", type="secondary"):
-            if st.checkbox("I confirm I want to delete ALL data"):
-                try:
-                    conn = sqlite3.connect('invoices.db')
-                    conn.execute("DELETE FROM invoice_items")
-                    conn.execute("DELETE FROM invoices")
-                    conn.commit()
-                    conn.close()
-                    st.success("All data cleared successfully!")
-                    st.experimental_rerun()
-                except Exception as e:
-                    st.error(f"Error clearing data: {e}")
+        # Initialize session state for delete confirmation
+        if 'delete_confirmation' not in st.session_state:
+            st.session_state.delete_confirmation = False
+
+        if not st.session_state.delete_confirmation:
+            if st.button("🗑️ Clear All Data", type="secondary"):
+                st.session_state.delete_confirmation = True
+                st.rerun()
+        else:
+            st.warning("⚠️ This will permanently delete ALL invoice data!")
+            col_a, col_b = st.columns(2)
+
+            with col_a:
+                if st.button("✅ Yes, Delete All", type="primary"):
+                    try:
+                        conn = sqlite3.connect(REPO_DB_PATH)
+                        cursor = conn.cursor()
+
+                        # Delete in correct order (items first, then invoices)
+                        cursor.execute("DELETE FROM invoice_items")
+                        items_deleted = cursor.rowcount
+                        cursor.execute("DELETE FROM invoices")
+                        invoices_deleted = cursor.rowcount
+
+                        # Reset auto-increment counters
+                        cursor.execute("DELETE FROM sqlite_sequence WHERE name IN ('invoices', 'invoice_items')")
+
+                        conn.commit()
+                        conn.close()
+
+                        st.success(f"✅ All data cleared successfully! Deleted {invoices_deleted} invoices and {items_deleted} items.")
+                        st.session_state.delete_confirmation = False
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Error clearing data: {e}")
+                        st.session_state.delete_confirmation = False
+
+            with col_b:
+                if st.button("❌ Cancel"):
+                    st.session_state.delete_confirmation = False
                     st.rerun()
+
         if st.button("📋 View Database Schema"):
             try:
-                conn = sqlite3.connect('invoices.db')
+                conn = sqlite3.connect(REPO_DB_PATH)
                 cursor = conn.cursor()
 
                 # Get table schemas
@@ -853,10 +888,10 @@ def data_management_page():
             st.write("**Data Validation:**")
             negative_amounts = (invoices_df['total_amount'] < 0).sum()
             zero_amounts = (invoices_df['total_amount'] == 0).sum()
-            future_dates = (pd.to_datetime(invoices_df['processed_at']) > datetime.now()).sum();
+            future_dates = (pd.to_datetime(invoices_df['processed_at']) > datetime.now()).sum()
 
             st.write(f"Negative amounts: {negative_amounts}")
-            future_dates = (pd.to_datetime(invoices_df['processed_at']) > datetime.now()).sum()
+            st.write(f"Zero amounts: {zero_amounts}")
             st.write(f"Future dates: {future_dates}")
 
 def search_and_filter_page():

@@ -1,10 +1,17 @@
-
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
+from datetime import datetime, timezone
+import os
 
 Base = declarative_base()
+
+def get_default_db_path():
+    """Get the absolute path to the main invoices.db file"""
+    current_file = os.path.abspath(__file__)
+    src_dir = os.path.dirname(current_file)
+    invoice_rag_dir = os.path.dirname(src_dir)
+    return os.path.join(invoice_rag_dir, 'invoices.db')
 
 class Invoice(Base):
     __tablename__ = 'invoices'
@@ -22,8 +29,8 @@ class Invoice(Base):
     payment_method = Column(String)
     cashier = Column(String)
     image_path = Column(String)
-    processed_at = Column(DateTime, default=datetime.utcnow)
-    
+    processed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
     # Relationship to items
     items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")
 
@@ -35,7 +42,7 @@ class InvoiceItem(Base):
 
     id = Column(Integer, primary_key=True)
     invoice_id = Column(Integer, ForeignKey('invoices.id'), nullable=False)
-    name = Column(String, nullable=False)
+    item_name = Column(String, nullable=False)  # Changed from 'name' to 'item_name'
     quantity = Column(Integer)
     unit_price = Column(Float)
     total_price = Column(Float, nullable=False)
@@ -44,10 +51,12 @@ class InvoiceItem(Base):
     invoice = relationship("Invoice", back_populates="items")
 
     def __repr__(self):
-        return f"<InvoiceItem(name='{self.name}', total_price='{self.total_price}')>"
+        return f"<InvoiceItem(item_name='{self.item_name}', total_price='{self.total_price}')>"
 
-def get_db_session(db_path='../invoices.db'):
+def get_db_session(db_path=None):
     """Creates a database session with the specified database."""
+    if db_path is None:
+        db_path = get_default_db_path()
     engine = create_engine(f'sqlite:///{db_path}')
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
@@ -78,7 +87,7 @@ def insert_invoice_data(session, invoice_data, image_path):
         for item_data in invoice_data.items:
             item = InvoiceItem(
                 invoice_id=invoice.id,
-                name=item_data.name,
+                item_name=item_data.name,  # Updated to use 'item_name' column
                 quantity=item_data.quantity,
                 unit_price=float(item_data.unit_price) if item_data.unit_price else None,
                 total_price=float(item_data.total_price)
@@ -107,4 +116,3 @@ def get_invoices_with_items(session):
         }
         for invoice in invoices
     ]
-
