@@ -13,3 +13,6 @@ __pycache__/
 test*.db
 demo*.db
 temp*.db
+
+# Exclude specific files
+marimorules.md
