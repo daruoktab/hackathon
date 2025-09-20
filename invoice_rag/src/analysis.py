@@ -1,5 +1,50 @@
 from datetime import datetime, timedelta
-from .database import Invoice
+from .database import Invoice, get_db_session
+
+def analyze_invoices():
+    """Analyze all invoices and return summary statistics."""
+    session = get_db_session()
+    try:
+        # Get all invoices
+        invoices = session.query(Invoice).all()
+        
+        if not invoices:
+            return {
+                'total_invoices': 0,
+                'total_spent': 0.0,
+                'average_amount': 0.0,
+                'top_vendors': []
+            }
+        
+        total_invoices = len(invoices)
+        total_spent = sum(inv.total_amount for inv in invoices)
+        average_amount = total_spent / total_invoices if total_invoices > 0 else 0.0
+        
+        # Calculate top vendors
+        vendor_totals = {}
+        for invoice in invoices:
+            vendor = invoice.shop_name or 'Unknown'
+            if vendor not in vendor_totals:
+                vendor_totals[vendor] = 0
+            vendor_totals[vendor] += invoice.total_amount
+        
+        # Sort vendors by total spending
+        top_vendors = []
+        for vendor, total in sorted(vendor_totals.items(), key=lambda x: x[1], reverse=True):
+            top_vendors.append({
+                'name': vendor,
+                'total': total
+            })
+        
+        return {
+            'total_invoices': total_invoices,
+            'total_spent': total_spent,
+            'average_amount': average_amount,
+            'top_vendors': top_vendors
+        }
+    
+    finally:
+        session.close()
 
 def parse_invoice_date(date_str):
     """Parse various date formats from Indonesian invoices."""

@@ -210,7 +210,7 @@ Return ONLY the JSON, no explanations.'''
 def create_tables():
     """Create database tables if they don't exist."""
     # Import the centralized database path function
-    from database import get_default_db_path
+    from .database import get_default_db_path
 
     db_path = get_default_db_path()
     conn = sqlite3.connect(db_path)
@@ -257,7 +257,7 @@ def save_to_database_robust(invoice_data, image_path):
     try:
         create_tables()
         # Import the centralized database path function
-        from database import get_default_db_path
+        from .database import get_default_db_path
 
         db_path = get_default_db_path()
         conn = sqlite3.connect(db_path)

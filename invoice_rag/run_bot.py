@@ -2,12 +2,16 @@
 import os
 import sys
 import asyncio
+import nest_asyncio
+
+# Allow nested event loops
+nest_asyncio.apply()
 
 # Add the project root directory to Python path
 project_root = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(project_root)
+sys.path.insert(0, project_root)
 
-from src.telegram.bot import main
+from telegram_bot.bot import main
 
 if __name__ == '__main__':
     asyncio.run(main())

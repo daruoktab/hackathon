@@ -11,7 +11,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
 from src.processor import process_invoice
-from src.analysis_new import analyze_invoices
+from src.analysis import analyze_invoices
 from src.database import get_db_session, Invoice
 
 # Load environment variables from .env file
@@ -22,6 +22,9 @@ TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
+    if not update.message:
+        return
+        
     keyboard = [
         ['/upload_invoice', '/view_summary'],
         ['/recent_invoices', '/help']
@@ -38,6 +41,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
+    if not update.message:
+        return
+        
     help_text = (
         "Here are all available commands:\n\n"
         "/start - Start the bot and show main menu\n"
@@ -51,6 +57,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle invoice photos sent by users."""
+    if not update.message or not update.effective_user:
+        return
+        
     # Get the largest photo (best quality)
     photo = update.message.photo[-1]
     
@@ -64,22 +73,23 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.message.reply_text("Processing your invoice... Please wait.")
         invoice_data = process_invoice(temp_path)
         
-        # Save to database
-        session = get_db_session()
-        invoice = Invoice(**invoice_data)
-        session.add(invoice)
-        session.commit()
-        
-        # Send response
-        response = (
-            f"✅ Invoice processed successfully!\n\n"
-            f"📅 Date: {invoice.date}\n"
-            f"🏢 Vendor: {invoice.vendor}\n"
-            f"💰 Total Amount: ${invoice.total_amount:.2f}\n"
-            f"📝 Items: {len(invoice.items)} items\n\n"
-            f"Use /view_summary to see your invoice analysis."
-        )
-        await update.message.reply_text(response)
+        if invoice_data:
+            # Use the processor's database saving function
+            from src.processor import save_to_database_robust
+            save_to_database_robust(invoice_data, temp_path)
+            
+            # Send response
+            response = (
+                f"✅ Invoice processed successfully!\n\n"
+                f"📅 Date: {invoice_data.get('invoice_date', 'Unknown')}\n"
+                f"🏢 Vendor: {invoice_data.get('shop_name', 'Unknown')}\n"
+                f"💰 Total Amount: Rp {invoice_data.get('total_amount', 0):,.2f}\n"
+                f"📝 Items: {len(invoice_data.get('items', []))} items\n\n"
+                f"Use /view_summary to see your invoice analysis."
+            )
+            await update.message.reply_text(response)
+        else:
+            await update.message.reply_text("❌ Failed to process invoice. Please try again with a clearer image.")
         
     except Exception as e:
         await update.message.reply_text(f"❌ Error processing invoice: {str(e)}")
@@ -91,19 +101,22 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def view_summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show invoice summary and analysis."""
+    if not update.message:
+        return
+        
     try:
         analysis = analyze_invoices()
         
         summary = (
             "📊 Invoice Summary\n\n"
             f"Total Invoices: {analysis['total_invoices']}\n"
-            f"Total Spent: ${analysis['total_spent']:.2f}\n"
-            f"Average Amount: ${analysis['average_amount']:.2f}\n\n"
+            f"Total Spent: Rp {analysis['total_spent']:,.2f}\n"
+            f"Average Amount: Rp {analysis['average_amount']:,.2f}\n\n"
             "Top Vendors:\n"
         )
         
         for vendor in analysis['top_vendors'][:3]:
-            summary += f"• {vendor['name']}: ${vendor['total']:.2f}\n"
+            summary += f"• {vendor['name']}: Rp {vendor['total']:,.2f}\n"
         
         await update.message.reply_text(summary)
         
@@ -112,9 +125,12 @@ async def view_summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def recent_invoices(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show recent invoices."""
+    if not update.message:
+        return
+        
     try:
         session = get_db_session()
-        invoices = session.query(Invoice).order_by(Invoice.date.desc()).limit(5).all()
+        invoices = session.query(Invoice).order_by(Invoice.processed_at.desc()).limit(5).all()
         
         if not invoices:
             await update.message.reply_text("No invoices found in the database.")
@@ -123,9 +139,9 @@ async def recent_invoices(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         response = "🧾 Your Recent Invoices:\n\n"
         for inv in invoices:
             response += (
-                f"📅 {inv.date}\n"
-                f"🏢 {inv.vendor}\n"
-                f"💰 ${inv.total_amount:.2f}\n"
+                f"📅 {inv.invoice_date or 'Unknown date'}\n"
+                f"🏢 {inv.shop_name}\n"
+                f"💰 Rp {inv.total_amount:,.2f}\n"
                 "───────────────\n"
             )
         
@@ -136,6 +152,9 @@ async def recent_invoices(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def upload_invoice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Guide users on how to upload an invoice."""
+    if not update.message:
+        return
+        
     guide = (
         "📸 Cara Upload Invoice:\n\n"
         "1. Pastikan invoice dalam bentuk gambar yang jelas\n"
@@ -152,6 +171,9 @@ async def upload_invoice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle text messages."""
+    if not update.message:
+        return
+        
     await update.message.reply_text(
         "Please send me an invoice image to process it, or use the commands below:\n"
         "/upload_invoice - Upload an invoice\n"
@@ -184,11 +206,7 @@ async def main() -> None:
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     print("Bot is ready to serve!")
-    # Start the Bot
-    await application.initialize()
-    await application.start()
-    await application.run_polling()
-
-    # Run the bot until you press Ctrl-C
     print("Press Ctrl-C to stop the bot")
-    await application.updater.stop()
+    
+    # Start the Bot
+    await application.run_polling()  # type: ignore
