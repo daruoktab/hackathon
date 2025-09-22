@@ -12,30 +12,33 @@ from datetime import datetime
 import plotly.express as px
 from PIL import Image
 import json
+from typing import Optional, Dict, Any
 
-# Add the src directory to Python path - fix the path resolution
+# Add the project root to Python path - fix the path resolution
 current_dir = os.path.dirname(os.path.abspath(__file__))
-src_dir = os.path.join(os.path.dirname(current_dir), 'src')
-sys.path.insert(0, src_dir)
+project_root = os.path.dirname(current_dir)  # This goes to invoice_rag directory
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 # Database path - use the main repo database
 REPO_DB_PATH = os.path.abspath(os.path.join(current_dir, '..', 'invoices.db'))
 
 try:
-    from processor import process_invoice_with_llm, save_to_database_robust, create_tables
-    from database import get_db_session, Invoice, InvoiceItem
+    from src.processor import process_invoice_with_llm, save_to_database_robust, create_tables
     IMPORTS_SUCCESS = True
 except ImportError as e:
     st.error(f"Import error: {e}")
+    st.error(f"Current working directory: {os.getcwd()}")
+    st.error(f"Project root directory: {project_root}")
+    st.error(f"Python path includes: {sys.path}")
     IMPORTS_SUCCESS = False
-    # Define dummy functions to prevent errors
-    def process_invoice_with_llm(*args, **kwargs):
-        return None
-    def save_to_database_robust(*args, **kwargs):
-        return None
-    def create_tables(*args, **kwargs):
-        pass
-
+    # Define dummy functions to prevent errors with correct return types
+    def process_invoice_with_llm(image_path) -> Optional[Dict[str, Any]]:
+        return None  # Returns dict or None
+    def save_to_database_robust(invoice_data, image_path) -> Optional[int]:
+        return None  # Returns int (invoice_id) or None
+    def create_tables() -> None:
+        return None  # Returns None
 # Page configuration
 st.set_page_config(
     page_title="Invoice Processing System",
@@ -108,17 +111,17 @@ def get_invoice_data():
     try:
         conn = sqlite3.connect(REPO_DB_PATH)
         invoices_df = pd.read_sql_query("""
-            SELECT * FROM invoices 
+            SELECT * FROM invoices
             ORDER BY processed_at DESC
         """, conn)
-        
+
         items_df = pd.read_sql_query("""
-            SELECT ii.*, i.shop_name, i.invoice_date 
+            SELECT ii.*, i.shop_name, i.invoice_date
             FROM invoice_items ii
             JOIN invoices i ON ii.invoice_id = i.id
             ORDER BY i.processed_at DESC
         """, conn)
-        
+
         conn.close()
         return invoices_df, items_df
     except Exception as e:
@@ -132,12 +135,12 @@ def process_uploaded_image(uploaded_file):
         temp_path = f"temp_{uploaded_file.name}"
         with open(temp_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
-        
+
         try:
             # Process with LLM
             with st.spinner("Processing invoice with AI..."):
                 invoice_data = process_invoice_with_llm(temp_path)
-            
+
             if invoice_data:
                 # Save to database
                 invoice_id = save_to_database_robust(invoice_data, temp_path)
@@ -150,7 +153,7 @@ def process_uploaded_image(uploaded_file):
             else:
                 st.error("❌ Failed to extract invoice data")
                 return None, None
-        
+
         except Exception as e:
             st.error(f"❌ Error processing invoice: {e}")
             return None, None
@@ -158,32 +161,32 @@ def process_uploaded_image(uploaded_file):
             # Clean up temp file
             if os.path.exists(temp_path):
                 os.remove(temp_path)
-    
+
     return None, None
 
 def main():
     """Main Streamlit application"""
-    
+
     # Header
     st.markdown('<h1 class="main-header">📄 Invoice Processing System</h1>', unsafe_allow_html=True)
-    
+
     # Check API key
     if not os.getenv("GROQ_API_KEY"):
         st.error("⚠️ GROQ_API_KEY not found in environment variables. Please set it up.")
         st.info("Create a .env file in the project root with: GROQ_API_KEY=your_key_here")
         return
-    
+
     # Initialize database
     if not init_database():
         return
-    
+
     # Sidebar navigation
     st.sidebar.title("Navigation")
     page = st.sidebar.selectbox(
         "Choose a page",
         ["📤 Upload & Process", "📊 Dashboard", "📋 View Invoices", "🔍 Search & Filter", "📈 Data Analytics", "⚙️ Data Management"]
     )
-    
+
     if page == "📤 Upload & Process":
         upload_and_process_page()
     elif page == "📊 Dashboard":
@@ -200,9 +203,9 @@ def main():
 def upload_and_process_page():
     """Upload and process invoice page"""
     st.header("📤 Upload & Process Invoice")
-    
+
     col1, col2 = st.columns([1, 1])
-    
+
     with col1:
         st.subheader("Upload Invoice Image")
         uploaded_file = st.file_uploader(
@@ -210,7 +213,7 @@ def upload_and_process_page():
             type=['jpg', 'jpeg', 'png'],
             help="Upload a clear image of your invoice"
         )
-        
+
         if uploaded_file is not None:
             # Display uploaded image
             image = Image.open(uploaded_file)
@@ -219,32 +222,32 @@ def upload_and_process_page():
             # Process button
             if st.button("🔄 Process Invoice", type="primary"):
                 invoice_data, temp_path = process_uploaded_image(uploaded_file)
-                
+
                 if invoice_data:
                     st.session_state['last_processed'] = invoice_data
-    
+
     with col2:
         st.subheader("Processing Results")
-        
+
         if 'last_processed' in st.session_state:
             data = st.session_state['last_processed']
-            
+
             # Display extracted data
             st.markdown("### 📋 Extracted Information")
-            
+
             col2_1, col2_2 = st.columns(2)
             with col2_1:
                 st.metric("Shop Name", data.get('shop_name', 'N/A'))
                 st.metric("Invoice Date", data.get('invoice_date', 'N/A'))
                 st.metric("Invoice Time", data.get('invoice_time', 'N/A'))
                 st.metric("Payment Method", data.get('payment_method', 'N/A'))
-            
+
             with col2_2:
                 st.metric("Total Amount", f"Rp {data.get('total_amount', 0):,.2f}")
                 st.metric("Subtotal", f"Rp {data.get('subtotal', 0):,.2f}" if data.get('subtotal') else 'N/A')
                 st.metric("Tax", f"Rp {data.get('tax', 0):,.2f}" if data.get('tax') else 'N/A')
                 st.metric("Discount", f"Rp {data.get('discount', 0):,.2f}" if data.get('discount') else 'N/A')
-            
+
             # Display items
             if data.get('items'):
                 st.markdown("### 🛒 Items")
@@ -256,45 +259,45 @@ def upload_and_process_page():
 def dashboard_page():
     """Dashboard with analytics"""
     st.header("📊 Dashboard")
-    
+
     # Load data
     invoices_df, items_df = get_invoice_data()
-    
+
     if invoices_df.empty:
         st.info("No invoice data available. Upload some invoices first!")
         return
-    
+
     # Convert processed_at to datetime
     invoices_df['processed_at'] = pd.to_datetime(invoices_df['processed_at'])
-    
+
     # Metrics row
     col1, col2, col3, col4 = st.columns(4)
-    
+
     with col1:
         total_invoices = len(invoices_df)
         st.metric("Total Invoices", total_invoices)
-    
+
     with col2:
         total_amount = invoices_df['total_amount'].sum()
         st.metric("Total Amount", f"Rp {total_amount:,.2f}")
-    
+
     with col3:
         avg_amount = invoices_df['total_amount'].mean()
         st.metric("Average Amount", f"Rp {avg_amount:,.2f}")
-    
+
     with col4:
         unique_shops = invoices_df['shop_name'].nunique()
         st.metric("Unique Shops", unique_shops)
-    
+
     # Charts
     col1, col2 = st.columns(2)
-    
+
     with col1:
         # Daily spending over time
         daily_spending = invoices_df.groupby(invoices_df['processed_at'].dt.date)['total_amount'].sum().reset_index()
         fig_line = px.line(
-            daily_spending, 
-            x='processed_at', 
+            daily_spending,
+            x='processed_at',
             y='total_amount',
             title='Daily Spending Trend',
             labels={'total_amount': 'Amount (Rp)', 'processed_at': 'Date'}
@@ -326,7 +329,7 @@ def get_detailed_invoice_data():
 
         # Get invoices with item counts and totals
         detailed_query = """
-            SELECT 
+            SELECT
                 i.*,
                 COUNT(ii.id) as item_count,
                 GROUP_CONCAT(ii.item_name, ', ') as item_names_preview
@@ -340,7 +343,7 @@ def get_detailed_invoice_data():
 
         # Get all items with invoice details
         items_query = """
-            SELECT 
+            SELECT
                 ii.*,
                 i.shop_name,
                 i.invoice_date,
@@ -354,7 +357,7 @@ def get_detailed_invoice_data():
 
         # Get summary statistics
         stats_query = """
-            SELECT 
+            SELECT
                 COUNT(DISTINCT i.id) as total_invoices,
                 COUNT(DISTINCT i.shop_name) as unique_shops,
                 COUNT(ii.id) as total_items,
@@ -385,7 +388,7 @@ def view_invoices_page():
     if invoices_df.empty:
         st.info("No invoice data available. Upload some invoices first!")
         return
-    
+
     # Quick Stats Section
     if not stats_df.empty:
         stats = stats_df.iloc[0]
@@ -443,7 +446,7 @@ def view_invoices_page():
 
     with col2:
         items_per_page = st.selectbox("Items per page", [10, 25, 50, 100], index=1)
-    
+
     with col3:
         sort_by = st.selectbox("Sort by",
                               ["processed_at", "total_amount", "shop_name", "invoice_date", "item_count"])
@@ -458,7 +461,7 @@ def view_invoices_page():
     # Pagination
     total_items = len(invoices_df)
     total_pages = (total_items - 1) // items_per_page + 1
-    
+
     if total_pages > 1:
         page_num = st.number_input("Page", min_value=1, max_value=total_pages, value=1)
         start_idx = (page_num - 1) * items_per_page
@@ -467,7 +470,7 @@ def view_invoices_page():
         st.info(f"Showing {start_idx + 1}-{min(end_idx, total_items)} of {total_items} invoices")
     else:
         display_df = invoices_df
-    
+
     # Display based on selected view mode
     if view_mode == "📋 Table View":
         display_table_view(display_df)
@@ -655,7 +658,7 @@ def data_analytics_page():
     if invoices_df.empty:
         st.info("No data available for analysis.")
         return
-    
+
     # Convert processed_at to datetime
     invoices_df['processed_at'] = pd.to_datetime(invoices_df['processed_at'])
     invoices_df['month'] = invoices_df['processed_at'].dt.to_period('M')
