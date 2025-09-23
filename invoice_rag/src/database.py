@@ -2,9 +2,16 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime, timezone
+from enum import Enum
 import os
 
 Base = declarative_base()
+
+class TransactionType(str, Enum):
+    """Transaction type enum for validation."""
+    BANK = "bank"
+    RETAIL = "retail"
+    E_COMMERCE = "e-commerce"
 
 def get_default_db_path():
     """Get the absolute path to the main invoices.db file"""
@@ -18,18 +25,11 @@ class Invoice(Base):
 
     id = Column(Integer, primary_key=True)
     shop_name = Column(String, nullable=False)
-    shop_address = Column(String)
-    invoice_number = Column(String)
-    invoice_date = Column(String)  # Original date from invoice
-    invoice_time = Column(String)  # Original time from invoice
+    invoice_date = Column(String)  # Original date from invoice in YYYY-MM-DD format
     total_amount = Column(Float, nullable=False)
-    subtotal = Column(Float)
-    tax = Column(Float)
-    discount = Column(Float)
-    payment_method = Column(String)
-    cashier = Column(String)
-    image_path = Column(String)
+    transaction_type = Column(String)  # bank, retail, or e-commerce
     processed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    image_path = Column(String)
 
     # Relationship to items
     items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")
@@ -42,7 +42,7 @@ class InvoiceItem(Base):
 
     id = Column(Integer, primary_key=True)
     invoice_id = Column(Integer, ForeignKey('invoices.id'), nullable=False)
-    item_name = Column(String, nullable=False)  # Changed from 'name' to 'item_name'
+    item_name = Column(String, nullable=False)
     quantity = Column(Integer)
     unit_price = Column(Float)
     total_price = Column(Float, nullable=False)
@@ -68,16 +68,9 @@ def insert_invoice_data(session, invoice_data, image_path):
         # Create invoice record
         invoice = Invoice(
             shop_name=invoice_data.shop_name,
-            shop_address=invoice_data.shop_address,
-            invoice_number=invoice_data.invoice_number,
             invoice_date=invoice_data.invoice_date,
-            invoice_time=invoice_data.invoice_time,
             total_amount=float(invoice_data.total_amount),
-            subtotal=float(invoice_data.subtotal) if invoice_data.subtotal else None,
-            tax=float(invoice_data.tax) if invoice_data.tax else None,
-            discount=float(invoice_data.discount) if invoice_data.discount else None,
-            payment_method=invoice_data.payment_method,
-            cashier=invoice_data.cashier,
+            transaction_type=invoice_data.transaction_type,
             image_path=image_path
         )
         session.add(invoice)
@@ -87,7 +80,7 @@ def insert_invoice_data(session, invoice_data, image_path):
         for item_data in invoice_data.items:
             item = InvoiceItem(
                 invoice_id=invoice.id,
-                item_name=item_data.name,  # Updated to use 'item_name' column
+                item_name=item_data.name,
                 quantity=item_data.quantity,
                 unit_price=float(item_data.unit_price) if item_data.unit_price else None,
                 total_price=float(item_data.total_price)

@@ -239,14 +239,13 @@ def upload_and_process_page():
             with col2_1:
                 st.metric("Shop Name", data.get('shop_name', 'N/A'))
                 st.metric("Invoice Date", data.get('invoice_date', 'N/A'))
-                st.metric("Invoice Time", data.get('invoice_time', 'N/A'))
-                st.metric("Payment Method", data.get('payment_method', 'N/A'))
+                st.metric("Transaction Type", data.get('transaction_type', 'N/A'))
 
             with col2_2:
                 st.metric("Total Amount", f"Rp {data.get('total_amount', 0):,.2f}")
-                st.metric("Subtotal", f"Rp {data.get('subtotal', 0):,.2f}" if data.get('subtotal') else 'N/A')
-                st.metric("Tax", f"Rp {data.get('tax', 0):,.2f}" if data.get('tax') else 'N/A')
-                st.metric("Discount", f"Rp {data.get('discount', 0):,.2f}" if data.get('discount') else 'N/A')
+                # Show item count if available
+                item_count = len(data.get('items', []))
+                st.metric("Items Count", item_count)
 
             # Display items
             if data.get('items'):
@@ -319,7 +318,7 @@ def dashboard_page():
 
     # Recent activity
     st.subheader("📅 Recent Activity")
-    recent_invoices = invoices_df.head(10)[['shop_name', 'total_amount', 'invoice_date', 'processed_at']]
+    recent_invoices = invoices_df.head(10)[['shop_name', 'total_amount', 'invoice_date', 'transaction_type', 'processed_at']]
     st.dataframe(recent_invoices, width='stretch')
 
 def get_detailed_invoice_data():
@@ -526,8 +525,8 @@ def display_table_view(df):
 
     # Select columns to display
     available_columns = df.columns.tolist()
-    default_columns = ['shop_name', 'total_amount', 'invoice_date', 'invoice_time',
-                      'payment_method', 'item_count', 'processed_at']
+    default_columns = ['shop_name', 'total_amount', 'invoice_date', 'transaction_type',
+                      'item_count', 'processed_at']
 
     selected_columns = st.multiselect(
         "Select columns to display:",
@@ -576,10 +575,10 @@ def display_card_view(df, items_df):
                     <span style="font-size: 1.2em; font-weight: bold; color: #28a745;">Rp {row['total_amount']:,.2f}</span>
                 </div>
                 <div style="margin: 0.5rem 0;">
-                    <span style="color: #6c757d;">📅 {row['invoice_date']} ⏰ {row.get('invoice_time', 'N/A')}</span>
+                    <span style="color: #6c757d;">📅 {row['invoice_date']}</span>
                 </div>
                 <div style="margin: 0.5rem 0;">
-                    <span style="color: #6c757d;">🛒 {row['item_count']} items | 💳 {row.get('payment_method', 'N/A')}</span>
+                    <span style="color: #6c757d;">🛒 {row['item_count']} items | 💳 {row.get('transaction_type', 'N/A')}</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -605,27 +604,18 @@ def display_detail_view(df, items_df):
 
             with col1:
                 st.markdown("**📋 Invoice Info**")
-                st.write(f"**Number:** {row.get('invoice_number', 'N/A')}")
                 st.write(f"**Date:** {row['invoice_date']}")
-                st.write(f"**Time:** {row.get('invoice_time', 'N/A')}")
                 st.write(f"**Processed:** {row['processed_at']}")
+                st.write(f"**Transaction Type:** {row.get('transaction_type', 'N/A')}")
 
             with col2:
                 st.markdown("**🏪 Shop Info**")
                 st.write(f"**Name:** {row['shop_name']}")
-                st.write(f"**Address:** {row.get('shop_address', 'N/A')}")
-                st.write(f"**Cashier:** {row.get('cashier', 'N/A')}")
 
             with col3:
                 st.markdown("**💰 Financial Details**")
                 st.write(f"**Total:** Rp {row['total_amount']:,.2f}")
-                if pd.notna(row.get('subtotal')):
-                    st.write(f"**Subtotal:** Rp {row['subtotal']:,.2f}")
-                if pd.notna(row.get('tax')):
-                    st.write(f"**Tax:** Rp {row['tax']:,.2f}")
-                if pd.notna(row.get('discount')):
-                    st.write(f"**Discount:** Rp {row['discount']:,.2f}")
-                st.write(f"**Payment:** {row.get('payment_method', 'N/A')}")
+                st.write(f"**Items:** {row['item_count']} items")
 
             # Items section
             invoice_items = items_df[items_df['invoice_id'] == row['id']]
@@ -884,7 +874,7 @@ def data_management_page():
 
             if duplicates > 0:
                 duplicate_invoices = invoices_df[invoices_df.duplicated(subset=['shop_name', 'total_amount', 'invoice_date'], keep=False)]
-                st.dataframe(duplicate_invoices[['shop_name', 'total_amount', 'invoice_date']])
+                st.dataframe(duplicate_invoices[['shop_name', 'total_amount', 'invoice_date', 'transaction_type']])
 
         with col3:
             # Data validation
@@ -942,7 +932,7 @@ def search_and_filter_page():
         )
 
     # Text search
-    search_text = st.text_input("Search in shop name, address, or invoice number")
+    search_text = st.text_input("Search in shop name or transaction type")
 
     # Apply filters
     filtered_df = invoices_df.copy()
@@ -968,8 +958,7 @@ def search_and_filter_page():
     if search_text:
         mask = (
             filtered_df['shop_name'].str.contains(search_text, case=False, na=False) |
-            filtered_df['shop_address'].str.contains(search_text, case=False, na=False) |
-            filtered_df['invoice_number'].str.contains(search_text, case=False, na=False)
+            filtered_df['transaction_type'].str.contains(search_text, case=False, na=False)
         )
         filtered_df = filtered_df[mask]
 
@@ -987,7 +976,7 @@ def search_and_filter_page():
             st.metric("Average Amount", f"Rp {filtered_df['total_amount'].mean():,.2f}")
 
         # Display table
-        display_columns = ['shop_name', 'total_amount', 'invoice_date', 'invoice_time', 'payment_method', 'processed_at']
+        display_columns = ['shop_name', 'total_amount', 'invoice_date', 'transaction_type', 'processed_at']
         st.dataframe(filtered_df[display_columns], use_container_width=True)
 
         # Download filtered data

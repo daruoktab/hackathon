@@ -1,14 +1,34 @@
+import sqlite3
+import os
 from datetime import datetime, timedelta
-from .database import Invoice, get_db_session
+
+# Database path - same as used in other modules
+def get_db_path():
+    """Get the database path"""
+    current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(current_dir, 'invoices.db')
+
+def get_db_connection():
+    """Get database connection"""
+    return sqlite3.connect(get_db_path())
 
 def analyze_invoices():
     """Analyze all invoices and return summary statistics."""
-    session = get_db_session()
+    conn = get_db_connection()
     try:
-        # Get all invoices
-        invoices = session.query(Invoice).all()
+        cursor = conn.cursor()
         
-        if not invoices:
+        # Get basic stats from the simplified schema
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_invoices,
+                SUM(total_amount) as total_spent,
+                AVG(total_amount) as average_amount
+            FROM invoices
+        """)
+        
+        result = cursor.fetchone()
+        if not result or result[0] == 0:
             return {
                 'total_invoices': 0,
                 'total_spent': 0.0,
@@ -16,35 +36,38 @@ def analyze_invoices():
                 'top_vendors': []
             }
         
-        total_invoices = len(invoices)
-        total_spent = sum(inv.total_amount for inv in invoices)
-        average_amount = total_spent / total_invoices if total_invoices > 0 else 0.0
+        total_invoices, total_spent, average_amount = result
         
-        # Calculate top vendors
-        vendor_totals = {}
-        for invoice in invoices:
-            vendor = invoice.shop_name or 'Unknown'
-            if vendor not in vendor_totals:
-                vendor_totals[vendor] = 0
-            vendor_totals[vendor] += invoice.total_amount
+        # Calculate top vendors (shops)
+        cursor.execute("""
+            SELECT 
+                shop_name,
+                SUM(total_amount) as total,
+                COUNT(*) as transaction_count
+            FROM invoices 
+            WHERE shop_name IS NOT NULL
+            GROUP BY shop_name 
+            ORDER BY total DESC
+            LIMIT 10
+        """)
         
-        # Sort vendors by total spending
         top_vendors = []
-        for vendor, total in sorted(vendor_totals.items(), key=lambda x: x[1], reverse=True):
+        for row in cursor.fetchall():
             top_vendors.append({
-                'name': vendor,
-                'total': total
+                'name': row[0],
+                'total': row[1],
+                'transaction_count': row[2]
             })
         
         return {
-            'total_invoices': total_invoices,
-            'total_spent': total_spent,
-            'average_amount': average_amount,
+            'total_invoices': total_invoices or 0,
+            'total_spent': total_spent or 0.0,
+            'average_amount': average_amount or 0.0,
             'top_vendors': top_vendors
         }
     
     finally:
-        session.close()
+        conn.close()
 
 def parse_invoice_date(date_str):
     """Parse various date formats from Indonesian invoices."""
@@ -69,25 +92,43 @@ def parse_invoice_date(date_str):
     
     return None
 
-def get_weekly_data(session, weeks_back=4):
+def get_weekly_data(weeks_back=4):
     """Get invoice data for the last N weeks."""
-    end_date = datetime.now()
-    start_date = end_date - timedelta(weeks=weeks_back)
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        end_date = datetime.now()
+        start_date = end_date - timedelta(weeks=weeks_back)
+        
+        # Get invoices from the last N weeks
+        cursor.execute("""
+            SELECT id, shop_name, invoice_date, total_amount, transaction_type, processed_at, image_path
+            FROM invoices 
+            WHERE processed_at >= ?
+            ORDER BY processed_at DESC
+        """, (start_date.isoformat(),))
+        
+        weekly_invoices = []
+        for row in cursor.fetchall():
+            weekly_invoices.append({
+                'id': row[0],
+                'shop_name': row[1],
+                'invoice_date': row[2],
+                'total_amount': row[3],
+                'transaction_type': row[4],
+                'processed_at': datetime.fromisoformat(row[5]) if row[5] else None,
+                'image_path': row[6]
+            })
+        
+        return weekly_invoices
     
-    # Get all invoices
-    invoices = session.query(Invoice).all()
-    
-    # Filter by processed_at (when we added to database) since invoice_date might be unreliable
-    weekly_invoices = []
-    for invoice in invoices:
-        if invoice.processed_at and invoice.processed_at >= start_date:
-            weekly_invoices.append(invoice)
-    
-    return weekly_invoices
+    finally:
+        conn.close()
 
-def calculate_weekly_averages(session, weeks_back=4):
+def calculate_weekly_averages(weeks_back=4):
     """Calculate weekly spending averages."""
-    invoices = get_weekly_data(session, weeks_back)
+    invoices = get_weekly_data(weeks_back)
     
     if not invoices:
         return {
@@ -105,18 +146,19 @@ def calculate_weekly_averages(session, weeks_back=4):
     weekly_counts = {}
     
     for invoice in invoices:
-        # Use processed_at for week calculation
-        week_start = invoice.processed_at - timedelta(days=invoice.processed_at.weekday())
-        week_key = week_start.strftime("%Y-%W")
-        
-        if week_key not in weekly_totals:
-            weekly_totals[week_key] = 0
-            weekly_counts[week_key] = 0
+        if invoice['processed_at']:
+            # Use processed_at for week calculation
+            week_start = invoice['processed_at'] - timedelta(days=invoice['processed_at'].weekday())
+            week_key = week_start.strftime("%Y-%W")
             
-        weekly_totals[week_key] += invoice.total_amount
-        weekly_counts[week_key] += 1
+            if week_key not in weekly_totals:
+                weekly_totals[week_key] = 0
+                weekly_counts[week_key] = 0
+                
+            weekly_totals[week_key] += invoice['total_amount']
+            weekly_counts[week_key] += 1
     
-    total_spent = sum(invoice.total_amount for invoice in invoices)
+    total_spent = sum(invoice['total_amount'] for invoice in invoices)
     transaction_count = len(invoices)
     
     weeks_with_data = len(weekly_totals)
@@ -134,9 +176,9 @@ def calculate_weekly_averages(session, weeks_back=4):
         'weekly_transaction_counts': weekly_counts
     }
 
-def analyze_spending_trends(session, weeks_back=4):
+def analyze_spending_trends(weeks_back=4):
     """Analyze spending trends over time."""
-    weekly_data = calculate_weekly_averages(session, weeks_back)
+    weekly_data = calculate_weekly_averages(weeks_back)
     weekly_breakdown = weekly_data['weekly_breakdown']
     
     if len(weekly_breakdown) < 2:
@@ -177,9 +219,9 @@ def analyze_spending_trends(session, weeks_back=4):
         'message': f'Spending is {trend} ({trend_percentage:+.1f}% change)'
     }
 
-def find_biggest_spending_categories(session, weeks_back=4):
+def find_biggest_spending_categories(weeks_back=4):
     """Find biggest spending by shop/category."""
-    invoices = get_weekly_data(session, weeks_back)
+    invoices = get_weekly_data(weeks_back)
     
     if not invoices:
         return {
@@ -192,16 +234,17 @@ def find_biggest_spending_categories(session, weeks_back=4):
     shop_totals = {}
     
     for invoice in invoices:
-        if invoice.shop_name not in shop_totals:
-            shop_totals[invoice.shop_name] = {
+        shop_name = invoice['shop_name'] or 'Unknown'
+        if shop_name not in shop_totals:
+            shop_totals[shop_name] = {
                 'total': 0,
                 'count': 0,
                 'invoices': []
             }
         
-        shop_totals[invoice.shop_name]['total'] += invoice.total_amount
-        shop_totals[invoice.shop_name]['count'] += 1
-        shop_totals[invoice.shop_name]['invoices'].append(invoice)
+        shop_totals[shop_name]['total'] += invoice['total_amount']
+        shop_totals[shop_name]['count'] += 1
+        shop_totals[shop_name]['invoices'].append(invoice)
     
     # Sort by total spending
     by_shop = []
@@ -219,10 +262,10 @@ def find_biggest_spending_categories(session, weeks_back=4):
     by_amount = []
     for invoice in invoices:
         by_amount.append({
-            'shop_name': invoice.shop_name,
-            'amount': invoice.total_amount,
-            'date': invoice.processed_at.strftime("%Y-%m-%d") if invoice.processed_at else 'Unknown',
-            'invoice_date': invoice.invoice_date or 'Unknown'
+            'shop_name': invoice['shop_name'] or 'Unknown',
+            'amount': invoice['total_amount'],
+            'date': invoice['processed_at'].strftime("%Y-%m-%d") if invoice['processed_at'] else 'Unknown',
+            'invoice_date': invoice['invoice_date'] or 'Unknown'
         })
     
     by_amount.sort(key=lambda x: x['amount'], reverse=True)
@@ -235,9 +278,9 @@ def find_biggest_spending_categories(session, weeks_back=4):
         'highest_single_transaction': highest_single
     }
 
-def analyze_item_spending(session, weeks_back=4):
+def analyze_item_spending(weeks_back=4):
     """Analyze spending by individual items."""
-    invoices = get_weekly_data(session, weeks_back)
+    invoices = get_weekly_data(weeks_back)
     
     if not invoices:
         return {
@@ -245,45 +288,118 @@ def analyze_item_spending(session, weeks_back=4):
             'total_items': 0
         }
     
-    item_totals = {}
-    
-    for invoice in invoices:
-        for item in invoice.items:
-            if item.name not in item_totals:
-                item_totals[item.name] = {
+    # Get items for all invoices in the period
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        # Get all items for invoices in the time period
+        invoice_ids = [str(inv['id']) for inv in invoices]
+        if not invoice_ids:
+            return {
+                'top_items': [],
+                'total_items': 0
+            }
+        
+        placeholders = ','.join(['?'] * len(invoice_ids))
+        cursor.execute(f"""
+            SELECT 
+                ii.item_name,
+                ii.quantity,
+                ii.unit_price,
+                ii.total_price,
+                i.shop_name
+            FROM invoice_items ii
+            JOIN invoices i ON ii.invoice_id = i.id
+            WHERE ii.invoice_id IN ({placeholders})
+        """, invoice_ids)
+        
+        item_totals = {}
+        
+        for row in cursor.fetchall():
+            item_name, quantity, unit_price, total_price, shop_name = row
+            
+            if item_name not in item_totals:
+                item_totals[item_name] = {
                     'total': 0,
                     'count': 0,
                     'shops': set()
                 }
             
-            item_totals[item.name]['total'] += item.total_price
-            item_totals[item.name]['count'] += item.quantity or 1
-            item_totals[item.name]['shops'].add(invoice.shop_name)
+            item_totals[item_name]['total'] += total_price or 0
+            item_totals[item_name]['count'] += quantity or 1
+            item_totals[item_name]['shops'].add(shop_name or 'Unknown')
+        
+        # Convert to list and sort
+        top_items = []
+        for item_name, data in item_totals.items():
+            avg_price = data['total'] / data['count'] if data['count'] > 0 else 0
+            top_items.append({
+                'item_name': item_name,
+                'total_spent': data['total'],
+                'quantity_bought': data['count'],
+                'average_price': avg_price,
+                'shops_bought_from': list(data['shops'])
+            })
+        
+        top_items.sort(key=lambda x: x['total_spent'], reverse=True)
+        
+        return {
+            'top_items': top_items[:20],  # Top 20 items
+            'total_unique_items': len(item_totals)
+        }
     
-    # Convert to list and sort
-    top_items = []
-    for item_name, data in item_totals.items():
-        top_items.append({
-            'item_name': item_name,
-            'total_spent': data['total'],
-            'quantity_bought': data['count'],
-            'average_price': data['total'] / data['count'],
-            'shops_bought_from': list(data['shops'])
+    finally:
+        conn.close()
+
+def analyze_transaction_types(weeks_back=4):
+    """Analyze spending by transaction type (bank, retail, e-commerce)."""
+    invoices = get_weekly_data(weeks_back)
+    
+    if not invoices:
+        return {
+            'by_type': [],
+            'total_by_type': {}
+        }
+    
+    type_totals = {}
+    type_counts = {}
+    
+    for invoice in invoices:
+        trans_type = invoice['transaction_type'] or 'unknown'
+        
+        if trans_type not in type_totals:
+            type_totals[trans_type] = 0
+            type_counts[trans_type] = 0
+            
+        type_totals[trans_type] += invoice['total_amount']
+        type_counts[trans_type] += 1
+    
+    # Convert to list format
+    by_type = []
+    for trans_type, total in type_totals.items():
+        count = type_counts[trans_type]
+        by_type.append({
+            'transaction_type': trans_type,
+            'total_amount': total,
+            'transaction_count': count,
+            'average_per_transaction': total / count if count > 0 else 0
         })
     
-    top_items.sort(key=lambda x: x['total_spent'], reverse=True)
+    by_type.sort(key=lambda x: x['total_amount'], reverse=True)
     
     return {
-        'top_items': top_items[:20],  # Top 20 items
-        'total_unique_items': len(item_totals)
+        'by_type': by_type,
+        'total_by_type': type_totals
     }
 
-def generate_comprehensive_analysis(session, weeks_back=4):
+def generate_comprehensive_analysis(weeks_back=4):
     """Generate a comprehensive financial analysis."""
-    weekly_avg = calculate_weekly_averages(session, weeks_back)
-    trends = analyze_spending_trends(session, weeks_back)
-    spending_cats = find_biggest_spending_categories(session, weeks_back)
-    item_analysis = analyze_item_spending(session, weeks_back)
+    weekly_avg = calculate_weekly_averages(weeks_back)
+    trends = analyze_spending_trends(weeks_back)
+    spending_cats = find_biggest_spending_categories(weeks_back)
+    item_analysis = analyze_item_spending(weeks_back)
+    transaction_types = analyze_transaction_types(weeks_back)
     
     return {
         'period': f'Last {weeks_back} weeks',
@@ -296,10 +412,11 @@ def generate_comprehensive_analysis(session, weeks_back=4):
         'trends': trends,
         'top_spending': spending_cats,
         'item_analysis': item_analysis,
-        'insights': generate_insights(weekly_avg, trends, spending_cats, item_analysis)
+        'transaction_types': transaction_types,
+        'insights': generate_insights(weekly_avg, trends, spending_cats, item_analysis, transaction_types)
     }
 
-def generate_insights(weekly_avg, trends, spending_cats, item_analysis):
+def generate_insights(weekly_avg, trends, spending_cats, item_analysis, transaction_types=None):
     """Generate key insights from the analysis."""
     insights = []
     
@@ -325,5 +442,10 @@ def generate_insights(weekly_avg, trends, spending_cats, item_analysis):
         insights.append("You shop frequently (>20 transactions recently)")
     elif weekly_avg['transaction_count'] < 5:
         insights.append("You shop infrequently (<5 transactions recently)")
+    
+    # Transaction type insights
+    if transaction_types and transaction_types['by_type']:
+        top_type = transaction_types['by_type'][0]
+        insights.append(f"Most spending via: {top_type['transaction_type']} (Rp {top_type['total_amount']:,.0f})")
     
     return insights
