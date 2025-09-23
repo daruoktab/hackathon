@@ -1,18 +1,79 @@
-# IDE
-.vscode/
-
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Environment variables
+# Virtual environments
 .env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# Temporary databases (keep main invoices.db)
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Database files (except main invoice database)
 test*.db
 demo*.db
 temp*.db
+*.sqlite
+*.sqlite3
+
+# Main database is tracked - remove this line if you want to ignore it
+# invoice_rag/invoices.db
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Invoice images (for privacy protection)
+*.jpg
+*.jpeg
+*.png
+*.pdf
+
+# Allow sample test invoices for demo purposes
+!invoice_rag/invoices/test*.jpg
+!invoice_rag/invoices/test*.jpeg
+!invoice_rag/invoices/test*.png
+!invoice_rag/invoices/test*.pdf
+
+# Temporary files
+*.tmp
+*.temp
 
 # Exclude specific files
 marimorules.md
