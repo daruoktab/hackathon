@@ -168,8 +168,8 @@ def main():
         choice = input("\nSelect option (0-5): ").strip()
 
         if choice == "1":
-            confirm = input("⚠️  Delete ALL data? (yes/no): ").lower()
-            if confirm == "yes":
+            confirm = input("⚠️  Delete ALL data? (yes/no/y/n): ").lower()
+            if confirm in ["yes", "y"]:
                 clean_database(db_path, "all")
                 vacuum_database(db_path)
         elif choice == "2":
@@ -193,8 +193,8 @@ def main():
         action = sys.argv[1].lower()
         if action in ["all", "items", "old", "test"]:
             if action == "all":
-                confirm = input("⚠️  Delete ALL data? (yes/no): ").lower()
-                if confirm != "yes":
+                confirm = input("⚠️  Delete ALL data? (yes/no/y/n): ").lower()
+                if confirm not in ["yes", "y"]:
                     print("Cancelled.")
                     return
             clean_database(db_path, action)
