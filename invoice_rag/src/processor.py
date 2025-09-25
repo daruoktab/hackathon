@@ -6,7 +6,7 @@ Invoice Processor - Main invoice processing with standardized date/time format
 import os
 import json
 import base64
-import sqlite3ValidationError
+import sqlite3
 import re
 from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
