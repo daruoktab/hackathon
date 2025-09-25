@@ -1,23 +1,18 @@
 import matplotlib.pyplot as plt
-import pandas as pd
-from datetime import datetime, timedelta
-import seaborn as sns
+from matplotlib.ticker import FuncFormatter
 from io import BytesIO
-import os
 import sys
 from pathlib import Path
-
-# Add the project root to Python path
-project_root = Path(__file__).parent.parent
-sys.path.append(str(project_root))
-
 from src.analysis import (
     analyze_invoices,
     calculate_weekly_averages,
     analyze_spending_trends,
-    find_biggest_spending_categories,
     analyze_transaction_types
 )
+
+# Add the project root to Python path
+project_root = Path(__file__).parent.parent
+sys.path.append(str(project_root))
 
 def get_spending_pattern_plot() -> BytesIO:
     """Generate spending pattern visualization."""
@@ -42,7 +37,7 @@ def get_spending_pattern_plot() -> BytesIO:
     
     # Format y-axis labels to show millions
     plt.gca().yaxis.set_major_formatter(
-        plt.FuncFormatter(lambda x, p: f'{int(x/1000000)}M' if x >= 1000000 else f'{int(x/1000):,}K')
+        FuncFormatter(lambda x, p: f'{int(x/1000000)}M' if x >= 1000000 else f'{int(x/1000):,}K')
     )
     
     plt.tight_layout()
@@ -138,7 +133,7 @@ def get_daily_pattern_plot() -> BytesIO:
     
     # Format y-axis labels
     plt.gca().yaxis.set_major_formatter(
-        plt.FuncFormatter(lambda x, p: f'{int(x/1000):,}K')
+        FuncFormatter(lambda x, p: f'{int(x/1000):,}K')
     )
     
     # Add trend information
@@ -210,7 +205,7 @@ def create_summary_visualization() -> BytesIO:
     return buf
 
 # Since we only have one visualization now, we don't need a map
-def get_visualization(keyword: str = None) -> BytesIO:
+def get_visualization(keyword: str | None = None) -> BytesIO:
     """Get the summary visualization."""
     return create_summary_visualization()
 

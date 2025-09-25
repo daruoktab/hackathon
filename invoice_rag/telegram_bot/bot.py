@@ -5,21 +5,20 @@ from dotenv import load_dotenv
 import sys
 import asyncio
 from pathlib import Path
-
-# Add the project root to Python path
-project_root = Path(__file__).parent.parent.parent
-sys.path.append(str(project_root))
-
 from src.processor import process_invoice
 from src.analysis import analyze_invoices
 from src.database import get_db_session, Invoice
-from telegram_bot.visualizations import get_visualization, get_available_visualizations
+from telegram_bot.visualizations import get_visualization
 from telegram_bot.spending_limits import (
     init_spending_limits_table,
     set_monthly_limit,
     get_monthly_limit,
     check_spending_limit
 )
+
+# Add the project root to Python path
+project_root = Path(__file__).parent.parent.parent
+sys.path.append(str(project_root))
 
 # Load environment variables from .env file
 load_dotenv()
@@ -202,10 +201,8 @@ async def upload_invoice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle text messages."""
-    if not update.message:
+    if not update.message or not update.message.text:
         return
-    
-    text = update.message.text.lower()
         
     await update.message.reply_text(
         "Please send me an invoice image to process it, or use the commands below:\n"
@@ -336,8 +333,11 @@ async def main() -> None:
     
     # Start the Bot with proper shutdown handling
     try:
-        await application.run_polling(allowed_updates=Update.ALL_TYPES)
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
     except (KeyboardInterrupt, SystemExit):
         print("\nBot is shutting down...")
     finally:
         print("Cleanup complete. Bot stopped.")
+
+if __name__ == "__main__":
+    asyncio.run(main())
