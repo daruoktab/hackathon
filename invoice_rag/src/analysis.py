@@ -104,10 +104,10 @@ def get_weekly_data(weeks_back=4):
         # Get invoices from the last N weeks
         cursor.execute("""
             SELECT id, shop_name, invoice_date, total_amount, transaction_type, processed_at, image_path
-            FROM invoices 
-            WHERE processed_at >= ?
-            ORDER BY processed_at DESC
-        """, (start_date.isoformat(),))
+            FROM invoices
+            WHERE invoice_date >= ?
+            ORDER BY invoice_date DESC
+        """, (start_date.strftime('%Y-%m-%d'),))
         
         weekly_invoices = []
         for row in cursor.fetchall():
@@ -146,17 +146,22 @@ def calculate_weekly_averages(weeks_back=4):
     weekly_counts = {}
     
     for invoice in invoices:
-        if invoice['processed_at']:
-            # Use processed_at for week calculation
-            week_start = invoice['processed_at'] - timedelta(days=invoice['processed_at'].weekday())
+        date_to_use = parse_invoice_date(invoice['invoice_date'])
+        if date_to_use:
+            # Use invoice_date for week calculation
+            week_start = date_to_use - timedelta(days=date_to_use.weekday())
+            week_end = week_start + timedelta(days=6)
             week_key = week_start.strftime("%Y-%W")
             
             if week_key not in weekly_totals:
-                weekly_totals[week_key] = 0
-                weekly_counts[week_key] = 0
+                weekly_totals[week_key] = {
+                    'total': 0,
+                    'count': 0,
+                    'range': f"{week_start.strftime('%d/%m')}-{week_end.strftime('%d/%m')}"
+                }
                 
-            weekly_totals[week_key] += invoice['total_amount']
-            weekly_counts[week_key] += 1
+            weekly_totals[week_key]['total'] += invoice['total_amount']
+            weekly_totals[week_key]['count'] += 1
     
     total_spent = sum(invoice['total_amount'] for invoice in invoices)
     transaction_count = len(invoices)
@@ -194,8 +199,8 @@ def analyze_spending_trends(weeks_back=4):
     # Calculate trend
     if len(sorted_weeks) >= 2:
         recent_weeks = sorted_weeks[-2:]  # Last 2 weeks
-        old_avg = recent_weeks[0][1]
-        new_avg = recent_weeks[1][1]
+        old_avg = recent_weeks[0][1]['total']
+        new_avg = recent_weeks[1][1]['total']
         
         if old_avg > 0:
             trend_percentage = ((new_avg - old_avg) / old_avg) * 100
@@ -264,7 +269,7 @@ def find_biggest_spending_categories(weeks_back=4):
         by_amount.append({
             'shop_name': invoice['shop_name'] or 'Unknown',
             'amount': invoice['total_amount'],
-            'date': invoice['processed_at'].strftime("%Y-%m-%d") if invoice['processed_at'] else 'Unknown',
+            'date': invoice['invoice_date'] or 'Unknown',
             'invoice_date': invoice['invoice_date'] or 'Unknown'
         })
     

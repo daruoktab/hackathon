@@ -1,6 +1,7 @@
 import sqlite3
 import os
 from typing import Optional, Dict, Any
+from src.analysis import analyze_invoices
 
 def get_db_path():
     """Get the database path"""
@@ -57,7 +58,6 @@ def get_monthly_limit(user_id: int) -> Optional[float]:
 def get_current_month_spending(user_id: int) -> float:
     """Get the total spending using the same calculation as view_summary."""
     try:
-        from src.analysis import analyze_invoices
         analysis = analyze_invoices()
         return float(analysis['total_spent'])
     except Exception:
