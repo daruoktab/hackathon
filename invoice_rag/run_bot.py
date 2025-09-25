@@ -14,4 +14,14 @@ sys.path.insert(0, project_root)
 from telegram_bot.bot import main
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nBot stopped by user")
+    except Exception as e:
+        print(f"\nError occurred: {e}")
+    finally:
+        # Ensure all pending tasks are complete
+        pending = asyncio.all_tasks()
+        for task in pending:
+            task.cancel()
