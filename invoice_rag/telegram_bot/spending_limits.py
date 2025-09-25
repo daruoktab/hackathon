@@ -1,7 +1,5 @@
 import sqlite3
 import os
-from pathlib import Path
-from datetime import datetime, date
 from typing import Optional, Dict, Any
 
 def get_db_path():
