@@ -39,11 +39,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(
-        'Hello! I am your invoice processing bot. You can:\n'
-        '• Upload an invoice image for processing\n'
-        '• View invoice summaries and analysis\n'
-        '• Check your recent invoices\n'
-        '\nUse the keyboard below or type /help for more information.',
+        "👋 Hello! I'm your friendly Invoice Helper Bot!\n\n"
+        "Let me help you keep track of your spending the easy way:\n"
+        "📸 Send me a photo of your receipt or invoice\n"
+        "📊 See where your money goes with simple charts\n"
+        "💰 Set and track your monthly budget\n"
+        "📋 Check your spending history\n\n"
+        "💡 Just tap any button below to get started!\n"
+        "Need help? Type /help for more details.",
         reply_markup=reply_markup
     )
 
@@ -53,16 +56,21 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
         
     help_text = (
-        "Here are all available commands:\n\n"
-        "/start - Start the bot and show main menu\n"
-        "/upload_invoice - Upload an invoice image for processing\n"
-        "/view_summary - View summary of all your invoices\n"
-        "/recent_invoices - Show your 5 most recent invoices\n"
-        "/visualizations - View spending analysis graphs\n"
-        "/set_limit - Set your monthly spending limit\n"
-        "/check_limit - Check your spending against limit\n"
-        "/help - Show this help message\n\n"
-        "To process an invoice, simply send me an image of your invoice!"
+        "📱 Here's what I can help you with:\n\n"
+        "📸 Save & Process Receipts:\n"
+        "• Just send me a photo of any receipt or invoice\n"
+        "• Type /upload_invoice to start uploading\n\n"
+        "💰 Track Your Spending:\n"
+        "• /view_summary - See your overall spending patterns\n"
+        "• /recent_invoices - Check your latest 5 expenses\n"
+        "• /visualizations - View easy-to-read spending charts\n\n"
+        "🎯 Budget Management:\n"
+        "• /set_limit - Set your monthly budget\n"
+        "• /check_limit - See how much you've spent\n\n"
+        "Other Commands:\n"
+        "• /start - Return to main menu\n"
+        "• /help - Show this helpful guide\n\n"
+        "💡 Quick Tip: Just send me a photo of your receipt, and I'll do the rest!"
     )
     await update.message.reply_text(help_text)
 
