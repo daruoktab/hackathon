@@ -194,16 +194,16 @@ async def upload_invoice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
         
     guide = (
-        "📸 Cara Upload Invoice:\n\n"
-        "1. Pastikan invoice dalam bentuk gambar yang jelas\n"
-        "2. Foto atau scan invoice Anda\n"
-        "3. Kirim gambar langsung ke bot ini\n"
-        "4. Tunggu proses analisis selesai\n\n"
+        "📸 How to Upload Invoice:\n\n"
+        "1. Make sure the invoice image is clear\n"
+        "2. Take a photo or scan your invoice\n"
+        "3. Send the image directly to this bot\n"
+        "4. Wait for the analysis to complete\n\n"
         "Tips:\n"
-        "• Pastikan gambar terang dan tidak blur\n"
-        "• Semua informasi penting harus terbaca\n"
-        "• Format yang didukung: JPG, PNG\n\n"
-        "Silakan kirim gambar invoice Anda sekarang! 📸"
+        "• Ensure the image is bright and not blurry\n"
+        "• All important information must be readable\n"
+        "• Supported formats: JPG, PNG\n\n"
+        "Please send your invoice image now! 📸"
     )
     await update.message.reply_text(guide)
 
