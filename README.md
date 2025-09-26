@@ -1,66 +1,58 @@
 # 🧾 AI Invoice Processing System
 
-A comprehensive AI-powered invoice processing system that extracts structured data from invoice images, stores it in a database, performs financial analysis, and provides both web UI and programmatic interfaces.
+A comprehensive AI-powered invoice processing system that extracts structured data from invoice images, stores it in a database, performs financial analysis, and provides interfaces via a Telegram Bot and a Streamlit Web App.
 
 ## 🚀 Features
 
 ### Core Processing
-- **🤖 AI-Powered OCR**: Extract structured data from invoice images using Groq LLM (Meta-Llama models)
-- **✅ Data Validation**: Pydantic v2 models with robust date/time formatting and field validation
-- **🔄 Batch Processing**: Process individual invoices or entire directories
-- **📷 Multi-Format Support**: JPG, JPEG, PNG image formats
+- **🤖 AI-Powered OCR**: Extracts structured data from invoice images using Groq LLM (Meta-Llama models).
+- **✅ Data Validation**: Pydantic models with robust date formatting and transaction type auto-detection.
+- **🔄 Batch Processing**: Process individual invoices or entire directories via CLI.
+- **📷 Multi-Format Support**: Handles JPG, JPEG, and PNG image formats.
 
 ### Data Management
-- **💾 SQLite Database**: Relational schema with invoices and invoice_items tables
-- **🔍 Advanced Search**: Filter by shop, date range, amount, and text search
-- **📊 Data Export**: CSV and JSON export capabilities
-- **🛠️ Database Tools**: Cleanup, backup, and maintenance utilities
-
-### Analytics & Insights
-- **📈 Financial Analytics**: Weekly/monthly spending analysis and trends
-- **🧠 AI Financial Advisor**: Personalized budget recommendations and insights
-- **📊 Visual Dashboards**: Interactive charts and spending patterns
-- **🏪 Shop Analysis**: Visit frequency, spending patterns, and comparisons
+- **💾 SQLite Database**: Simple and effective relational schema for invoices and items.
+- **📊 Data Analysis**: Provides summaries, top vendor analysis, and spending trends.
+- **📈 Visualization**: Generates comprehensive dashboards and plots for financial insights.
 
 ### User Interfaces
-- **🌐 Streamlit Web App**: Full-featured web interface with multiple pages
-- **💻 Command Line**: Direct Python API and CLI tools
-- **📱 Responsive Design**: Works on desktop and mobile devices
+- **📱 Telegram Bot**: An interactive bot for on-the-go invoice management.
+  - **📤 Upload Invoices**: Process invoices by sending a photo directly to the bot.
+  - **📊 View Summaries**: Get instant financial summaries and analysis.
+  - **📈 Get Visualizations**: Generate and view spending dashboards.
+  - **💰 Spending Limits**: Set and check monthly spending limits with alerts.
+  - **📜 Recent Invoices**: Quickly view your last 5 transactions.
+- **🌐 Streamlit Web App**: A full-featured web interface for in-depth analysis.
+- **💻 Command Line**: Direct Python API and CLI tools for batch processing.
 
 ## 📁 Project Structure
 
 ```
 hackathon/
 ├── README.md                      # This comprehensive guide
-├── .gitignore                     # Git ignore rules
-├── .vscode/                       # VS Code settings
 └── invoice_rag/                   # Main application directory
-    ├── 📋 Core System
-    │   ├── src/
-    │   │   ├── processor.py       # 🤖 Main invoice processing engine
-    │   │   ├── database.py        # 💾 Database models and utilities
-    │   │   ├── analysis.py        # 📊 Financial analysis engine
-    │   │   └── __init__.py        # Package initialization
-    │   ├── requirements.txt       # 📦 Python dependencies
-    │   ├── .env.example          # 🔧 Environment template
-    │   └── invoices.db           # 💽 SQLite database
+    ├── src/                       # Core application logic
+    │   ├── processor.py           # 🤖 Main invoice processing engine
+    │   ├── database.py            # 💾 Database models and utilities
+    │   └── analysis.py            # 📊 Financial analysis engine
     │
-    ├── 🌐 Web Interface
-    │   └── streamlit/
-    │       └── app.py            # Full-featured Streamlit web app
+    ├── telegram_bot/              # 📱 Telegram Bot interface
+    │   ├── bot.py                 # 🤖 Main bot logic and command handlers
+    │   ├── visualizations.py      # 📈 Generates charts and dashboards
+    │   └── spending_limits.py     # 💰 Manages user spending limits
     │
-    ├── 🛠️ Utilities
-    │   ├── run.py                # 🏃 Simple runner script
-    │   ├── cleanup.py            # 🧹 Database cleanup tool
-    │   ├── testgroq.py          # 🧪 Groq API testing
-    │   └── view_database.py      # ��� Database viewer (ASCII output)
+    ├── streamlit/                 # 🌐 Web Interface
+    │   └── app.py                 # Full-featured Streamlit web app
     │
-    └── 📂 Data
-        └── invoices/             # 📁 Input directory for invoice images
-            ├── test1.jpg         # 🖼️ Sample invoice images
-            ├── test2.jpg
-            ├── test3.jpg
-            └── test4.jpg
+    ├── invoices/                  # 📁 Input directory for invoice images
+    │   ├── test1.jpg
+    │   └── ...
+    │
+    ├── requirements.txt           # 📦 Python dependencies
+    ├── .env.example               # 🔧 Environment template
+    ├── run_bot.py                 # ▶️ Script to run the Telegram bot
+    ├── run.py                     # ▶️ Script for batch processing
+    └── invoices.db                # 💽 SQLite database
 ```
 
 ## 🛠️ Installation & Setup
@@ -73,291 +65,131 @@ cd hackathon/invoice_rag
 
 ### 2. Install Dependencies
 ```bash
-# Using pip
+# Using pip (recommended)
 pip install -r requirements.txt
 
-# Using uv (faster)
+# Using uv (faster alternative)
 uv pip install -r requirements.txt
-
-# Using conda
-conda create -n invoice_ai python=3.12
-conda activate invoice_ai
-pip install -r requirements.txt
 ```
 
 ### 3. Environment Setup
-```bash
-# Copy environment template
-cp .env.example .env
+Copy the environment template and add your API keys.
 
-# Edit .env and add your API key
-echo "GROQ_API_KEY=your_groq_api_key_here" > .env
+```bash
+cp .env.example .env
 ```
 
-### 4. Get Groq API Key
-1. Visit [Groq Console](https://console.groq.com/)
-2. Create account and generate API key
-3. Add key to `.env` file
+Edit the `.env` file with your keys:
+```
+GROQ_API_KEY="your_groq_api_key_here"
+TELEGRAM_BOT_TOKEN="your_telegram_bot_token_here"
+```
+
+- **Groq API Key**: Get from the [Groq Console](https://console.groq.com/).
+- **Telegram Bot Token**: Get by talking to [@BotFather](https://t.me/botfather) on Telegram.
 
 ## 🚀 Quick Start
 
-### Web Interface (Recommended)
+You can run the Telegram Bot, the Streamlit Web App, or use the command line for processing.
+
+### 1. Telegram Bot (Recommended for daily use)
+Run the bot with the dedicated script:
+```bash
+python run_bot.py
+```
+Interact with your bot on Telegram. You can upload invoices, view summaries, set spending limits, and get visual analytics.
+
+**Bot Commands:**
+- `/start` - Start the bot and show the main menu.
+- `/upload_invoice` - Instructions on how to upload an invoice.
+- `/view_summary` - Get a summary of all your invoices.
+- `/recent_invoices` - Show your 5 most recent invoices.
+- `/visualizations` - Generate and view a spending analysis dashboard.
+- `/set_limit <amount>` - Set your monthly spending limit.
+- `/check_limit` - Check your spending against your limit.
+- `/help` - Show the help message.
+
+### 2. Web Interface (For detailed analysis)
 ```bash
 streamlit run streamlit/app.py
 ```
-Access at: `http://localhost:8501`
+Access the web app at: `http://localhost:8501`
 
-**Web App Features:**
-- 📤 **Upload & Process**: Drag-drop invoice images for instant processing
-- 📊 **Dashboard**: Overview metrics and spending analytics  
-- 📋 **View Invoices**: Enhanced table, card, and detail views with pagination
-- 🔍 **Search & Filter**: Advanced filtering by shop, date, amount, and text
-- 📈 **Data Analytics**: Interactive charts, spending patterns, item analysis
-- ⚙️ **Data Management**: Database maintenance, export, and quality checks
-
-### Command Line Processing
-```python
-# Process single invoice
-from src.processor import process_invoice_with_llm, save_to_database_robust
-invoice_data = process_invoice_with_llm('path/to/invoice.jpg')
-save_to_database_robust(invoice_data, 'path/to/invoice.jpg')
-
-# View database contents
-python view_database.py
-
-# Test Groq API connection
-python testgroq.py
-```
-
-### Batch Processing
+### 3. Command Line Processing
+To process all images in the `invoices/` directory and save them to the database:
 ```bash
-# Process all images in invoices/ directory
 python run.py
-
-# Or programmatically
-from src.processor import process_invoice_directory
-process_invoice_directory('invoices/')
 ```
 
 ## 📊 Database Schema
 
-### Invoices Table
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | INTEGER | Primary key |
-| `shop_name` | TEXT | Store name |
-| `shop_address` | TEXT | Store address |
-| `invoice_number` | TEXT | Invoice number |
-| `invoice_date` | TEXT | Date (YYYY-MM-DD format) |
-| `invoice_time` | TEXT | Time (HH:MM format, 24-hour) |
-| `total_amount` | REAL | Total amount |
-| `subtotal` | REAL | Subtotal amount |
-| `tax` | REAL | Tax amount |
-| `discount` | REAL | Discount amount |
-| `payment_method` | TEXT | Payment method |
-| `cashier` | TEXT | Cashier name |
-| `image_path` | TEXT | Original image path |
-| `processed_at` | TEXT | Processing timestamp |
+The database uses a simplified and robust schema to store invoice data.
 
-### Invoice Items Table
+### `invoices` Table
 | Field | Type | Description |
-|-------|------|-------------|
-| `id` | INTEGER | Primary key |
-| `invoice_id` | INTEGER | Foreign key to invoices |
-| `item_name` | TEXT | Item name |
-| `quantity` | INTEGER | Item quantity |
-| `unit_price` | REAL | Price per unit |
-| `total_price` | REAL | Total price for item |
+|--------------------|---------|------------------------------------------|
+| `id` | INTEGER | Primary Key |
+| `shop_name` | TEXT | Name of the shop or vendor |
+| `invoice_date` | TEXT | Date from the invoice (YYYY-MM-DD) |
+| `total_amount` | REAL | The final total amount of the invoice |
+| `transaction_type` | TEXT | Type: `bank`, `retail`, or `e-commerce` |
+| `processed_at` | TIMESTAMP| Timestamp when the invoice was processed |
+| `image_path` | TEXT | Path to the original invoice image |
+
+### `invoice_items` Table
+| Field | Type | Description |
+|-------------|---------|------------------------------------|
+| `id` | INTEGER | Primary Key |
+| `invoice_id` | INTEGER | Foreign key to the `invoices` table |
+| `item_name` | TEXT | Name of the purchased item |
+| `quantity` | INTEGER | Quantity of the item |
+| `unit_price` | REAL | Price per unit of the item |
+| `total_price` | REAL | Total price for the line item |
+
+### `spending_limits` Table
+| Field | Type | Description |
+|---------------|---------|------------------------------------|
+| `user_id` | INTEGER | Telegram User ID (Primary Key) |
+| `monthly_limit` | REAL | The spending limit amount for the month|
+| `created_at` | TIMESTAMP| Timestamp of creation |
+| `updated_at` | TIMESTAMP| Timestamp of the last update |
 
 ## 🤖 AI Processing Pipeline
 
+The system uses a sophisticated pipeline to ensure data accuracy and consistency.
+
 ```mermaid
 graph TD
-    subgraph "Data Pipeline"
-        E[Pydantic Validation] --> F[Date/Time Standardization] --> G[SQLite Storage] --> H[Financial Analysis] --> I[Web Interface / API]
+    subgraph "Input"
+        A[Invoice Image] --> B[Telegram Bot or Web UI]
     end
-    subgraph "Input Processing"
-        A[Invoice Image] --> B[Base64 Encoding] --> C[Groq LLM Processing] --> D[JSON Extraction]
+    subgraph "Processing"
+        B --> C[Base64 Encoding] --> D[Groq LLM for Data Extraction] --> E[JSON Output]
+    end
+    subgraph "Validation & Storage"
+        E --> F[Pydantic Validation & Cleaning] --> G[Standardize Date & Currency] --> H[Save to SQLite DB]
+    end
+    subgraph "Analysis & Output"
+        H --> I[Financial Analysis Engine] --> J[Generate Visualizations] --> K[Display on Bot/Web]
     end
 ```
 
-**Processing Features:**
-- **Smart Date/Time Parsing**: Handles various Indonesian date formats
-- **Robust Validation**: Pydantic v2 with field validators
-- **Error Recovery**: Graceful handling of parsing failures
-- **Standardization**: Consistent YYYY-MM-DD and HH:MM formats
-
-## 📈 Analytics & Insights
-
-### Financial Analysis
-- **📊 Spending Trends**: Daily, weekly, monthly analysis
-- **🏪 Shop Insights**: Frequency vs. spending analysis
-- **🛒 Item Analysis**: Most purchased items and spending patterns
-- **📅 Time Patterns**: Weekday vs. weekend, hourly shopping patterns
-
-### AI-Powered Insights
-- **💡 Budget Recommendations**: Based on spending patterns
-- **⚠️ Anomaly Detection**: Unusual spending alerts  
-- **📈 Trend Predictions**: Spending forecast and trends
-- **🎯 Goal Tracking**: Budget vs. actual spending analysis
-
-## 🔧 Advanced Usage
-
-### Custom Processing
-```python
-from src.processor import RobustInvoice, process_invoice_with_llm
-from src.database import create_tables, get_db_connection
-
-# Initialize database
-create_tables()
-
-# Process with custom validation
-invoice_data = process_invoice_with_llm('invoice.jpg')
-validated_invoice = RobustInvoice(**invoice_data)
-
-# Custom database operations
-conn = get_db_connection()
-# Your custom queries here
-```
-
-### API Integration
-```python
-# Search invoices
-from src.database import search_invoices
-results = search_invoices(
-    shop_name="Indomaret",
-    date_range=("2024-01-01", "2024-12-31"),
-    amount_range=(10000, 100000)
-)
-
-# Financial analysis
-from src.analysis import analyze_spending_patterns
-analysis = analyze_spending_patterns(weeks_back=8)
-```
-
-## 🛠️ Maintenance & Utilities
-
-### Database Management
-```bash
-# View all invoices (clean ASCII output)
-python view_database.py
-
-# Clean up database
-python cleanup.py
-
-# Test API connection
-python testgroq.py
-```
-
-### Web App Features
-- **📱 Responsive Design**: Works on desktop and mobile
-- **🔄 Real-time Updates**: Live data refresh and processing
-- **📥 Data Export**: CSV and JSON download capabilities
-- **🛡️ Error Handling**: Graceful error management and user feedback
-
-## 📦 Dependencies
-
-### Core Processing
-- `groq>=0.4.0` - LLM API client
-- `pydantic>=2.0.0` - Data validation and parsing
-- `pillow>=9.5.0` - Image processing
-- `python-dotenv>=1.0.0` - Environment variables
-
-### Database
-- `sqlalchemy>=2.0.0` - Database ORM
-- `sqlite3` (built-in) - Database engine
-
-### Web Interface  
-- `streamlit>=1.28.0` - Web application framework
-- `pandas>=2.0.0` - Data manipulation
-- `plotly>=5.15.0` - Interactive charts
-- `numpy>=1.24.0` - Numerical computing
-
-### Additional
-- `opencv-python>=4.8.0` - Advanced image processing
-- `requests>=2.31.0` - HTTP requests
-
-## 🌐 Environment Configuration
-
-### Required Environment Variables
-```bash
-GROQ_API_KEY=your_groq_api_key_here
-```
-
-### Optional Configuration
-```bash
-DATABASE_PATH=invoices.db          # Custom database path
-MAX_IMAGE_SIZE=10485760           # Max image size (10MB)
-BATCH_SIZE=10                     # Batch processing size
-DEBUG_MODE=false                  # Enable debug logging
-```
-
-## 🧪 Testing & Development
-
-### Test API Connection
-```bash
-python testgroq.py
-```
-
-### Development Mode
-```bash
-# Run with auto-reload
-streamlit run streamlit/app.py --server.runOnSave true
-
-# Debug mode
-STREAMLIT_LOGGER_LEVEL=debug streamlit run streamlit/app.py
-```
-
-## 📊 Current Status
-
-✅ **Production Ready System**
-- 4 sample invoices processed
-- Complete web interface
-- Financial analysis pipeline
-- Data export capabilities
-- Robust error handling
+**Key Features of the Pipeline:**
+- **Smart Currency Parsing**: Handles various Indonesian currency formats (e.g., `59.385`, `6.000.000`, `25,500`) and converts them reliably.
+- **Robust Validation**: Pydantic models validate incoming data, standardize date formats to `YYYY-MM-DD`, and auto-detect transaction types.
+- **Error Recovery**: Gracefully handles failures in LLM parsing or data validation.
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)  
-5. Open a Pull Request
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b feature/amazing-feature`).
+3. Commit your changes (`git commit -m 'Add amazing feature'`).
+4. Push to the branch (`git push origin feature/amazing-feature`).
+5. Open a Pull Request.
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Support & Troubleshooting
-
-### Common Issues
-
-**Import Errors**
-```bash
-# Ensure you're in the correct directory
-cd invoice_rag
-python -c "from src.processor import process_invoice_with_llm; print('✅ Imports working')"
-```
-
-**Database Issues**
-```bash
-# Reinitialize database
-python -c "from src.database import create_tables; create_tables(); print('✅ Database initialized')"
-```
-
-**Streamlit Issues**
-```bash
-# Clear cache and restart
-streamlit cache clear
-streamlit run streamlit/app.py
-```
-
-### Getting Help
-- 📖 Check this README thoroughly
-- 🐛 Open an issue for bugs
-- 💡 Submit feature requests
-- 📧 Contact maintainers for support
+This project is licensed under the MIT License.
 
 ---
 
