@@ -77,3 +77,4 @@ Thumbs.db
 
 # Exclude specific files
 marimorules.md
+.kilocode/mcp.json
