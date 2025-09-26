@@ -32,9 +32,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
         
     keyboard = [
-        ['/upload_invoice', '/view_summary'],
-        ['/recent_invoices', '/visualizations'],
-        ['/set_limit', '/check_limit'],
+        ['/upload_invoice', '/analysis'],
+        ['/recent_invoices', '/set_limit'],
+        ['/check_limit'],
         ['/help']
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -61,9 +61,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "• Just send me a photo of any receipt or invoice\n"
         "• Type /upload_invoice to start uploading\n\n"
         "💰 Track Your Spending:\n"
-        "• /view_summary - See your overall spending patterns\n"
-        "• /recent_invoices - Check your latest 5 expenses\n"
-        "• /visualizations - View easy-to-read spending charts\n\n"
+        "• /analysis - See your overall spending patterns and visualization\n"
+        "• /recent_invoices - Check your latest 5 expenses\n\n"
         "🎯 Budget Management:\n"
         "• /set_limit - Set your monthly budget\n"
         "• /check_limit - See how much you've spent\n\n"
@@ -108,7 +107,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 f"🏢 Vendor: {invoice_data.get('shop_name', 'Unknown')}\n"
                 f"💰 Total Amount: Rp {amount:,.2f}\n"
                 f"📝 Items: {len(invoice_data.get('items', []))} items\n\n"
-                f"Use /view_summary to see your invoice analysis."
+                f"Use /analysis to see your invoice analysis."
             )
             await update.message.reply_text(response)
             
@@ -137,12 +136,13 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-async def view_summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Show invoice summary and analysis."""
+async def analysis_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show invoice summary and analysis, then send visualization."""
     if not update.message:
         return
         
     try:
+        # Send text summary first
         analysis = analyze_invoices()
         
         summary = (
@@ -157,9 +157,14 @@ async def view_summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             summary += f"• {vendor['name']}: Rp {vendor['total']:,.2f}\n"
         
         await update.message.reply_text(summary)
+
+        # Then, generate and send the visualization
+        await update.message.reply_text("📊 Generating your comprehensive analysis dashboard...")
+        buf = get_visualization()
+        await update.message.reply_photo(buf)
         
     except Exception as e:
-        await update.message.reply_text(f"❌ Error getting summary: {str(e)}")
+        await update.message.reply_text(f"❌ Error getting summary or visualization: {str(e)}")
 
 async def recent_invoices(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show recent invoices."""
@@ -215,23 +220,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_text(
         "Please send me an invoice image to process it, or use the commands below:\n"
         "/upload_invoice - Upload an invoice\n"
-        "/view_summary - View analysis\n"
-        "/visualizations - View spending analysis graphs\n"
+        "/analysis - View analysis\n"
         "/help - Get help"
     )
 
-async def visualizations_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle the visualizations command."""
-    if not update.message:
-        return
-    
-    try:
-        # Generate and send visualization
-        buf = get_visualization()
-        await update.message.reply_text("📊 Generating invoice summary visualization...")
-        await update.message.reply_photo(buf)
-    except Exception as e:
-        await update.message.reply_text(f"❌ Error generating visualization: {str(e)}")
 
 async def set_limit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle the set limit command."""
@@ -323,10 +315,9 @@ async def main() -> None:
     # Add command handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("view_summary", view_summary))
+    application.add_handler(CommandHandler("analysis", analysis_command))
     application.add_handler(CommandHandler("recent_invoices", recent_invoices))
     application.add_handler(CommandHandler("upload_invoice", upload_invoice))
-    application.add_handler(CommandHandler("visualizations", visualizations_command))
     application.add_handler(CommandHandler("set_limit", set_limit_command))
     application.add_handler(CommandHandler("check_limit", check_limit_command))
     
