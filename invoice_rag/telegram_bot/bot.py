@@ -375,19 +375,118 @@ async def clear_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     else:
         await update.message.reply_text("No chat history to clear.")
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle errors caused by Updates."""
+    import logging
+    import traceback
+    from telegram.error import NetworkError, TimedOut, BadRequest, Forbidden
+    
+    # Get the logger
+    logger = logging.getLogger(__name__)
+    
+    # Log the error
+    logger.error("Exception while handling an update:", exc_info=context.error)
+    
+    # Get the full traceback
+    if context.error:
+        tb_list = traceback.format_exception(type(context.error), context.error, context.error.__traceback__)
+        tb_string = "".join(tb_list)
+    else:
+        tb_string = "No traceback available"
+    
+    # Log detailed error information
+    logger.error(f"Update: {update}")
+    logger.error(f"Traceback:\n{tb_string}")
+    
+    # Handle specific error types
+    error_message = None
+    
+    if isinstance(context.error, NetworkError):
+        error_message = (
+            "🔌 Network connection issue detected.\n"
+            "The bot is experiencing connectivity problems. "
+            "Please try again in a moment."
+        )
+        logger.warning("Network error occurred - bot will retry automatically")
+        
+    elif isinstance(context.error, TimedOut):
+        error_message = (
+            "⏱️ Request timed out.\n"
+            "The operation took too long. Please try again."
+        )
+        logger.warning("Request timed out")
+        
+    elif isinstance(context.error, BadRequest):
+        error_message = (
+            "❌ Invalid request.\n"
+            "Something went wrong with your request. Please try again."
+        )
+        logger.error(f"Bad request: {context.error}")
+        
+    elif isinstance(context.error, Forbidden):
+        error_message = None  # User blocked the bot, can't send message
+        logger.info("User has blocked the bot or chat is inaccessible")
+        
+    else:
+        error_message = (
+            "❌ An unexpected error occurred.\n"
+            "The bot encountered an issue. Please try again later."
+        )
+        logger.error(f"Unexpected error: {type(context.error).__name__}: {context.error}")
+    
+    # Try to notify the user if possible
+    if error_message and update and isinstance(update, Update):
+        try:
+            if update.effective_message:
+                await update.effective_message.reply_text(error_message)
+            elif update.callback_query:
+                await update.callback_query.answer(error_message, show_alert=True)
+        except Exception as e:
+            # If we can't send the error message, just log it
+            logger.error(f"Could not send error message to user: {e}")
+
 async def main() -> None:
     """Start the bot."""
+    import logging
+    
+    # Configure logging
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO,
+        handlers=[
+            logging.FileHandler('telegram_bot.log'),
+            logging.StreamHandler()
+        ]
+    )
+    
+    # Set httpx logging to WARNING to reduce noise
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    
+    logger = logging.getLogger(__name__)
+    
     print("Starting bot...")
+    logger.info("Bot initialization started")
     
     if not TOKEN:
-        print("Error: TELEGRAM_BOT_TOKEN not found in environment variables")
+        error_msg = "Error: TELEGRAM_BOT_TOKEN not found in environment variables"
+        print(error_msg)
+        logger.error(error_msg)
         return
     
     # Initialize spending limits table
     init_spending_limits_table()
         
-    # Create the Application and pass it your bot's token
-    application = Application.builder().token(TOKEN).build()
+    # Create the Application with enhanced network error handling
+    application = (
+        Application.builder()
+        .token(TOKEN)
+        .connect_timeout(30.0)  # Increased connection timeout
+        .read_timeout(30.0)     # Increased read timeout
+        .write_timeout(30.0)    # Increased write timeout
+        .pool_timeout(30.0)     # Increased pool timeout
+        .build()
+    )
 
     # Add command handlers
     application.add_handler(CommandHandler("start", start))
@@ -404,17 +503,34 @@ async def main() -> None:
     
     # Handle all other text messages with the chatbot
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    # Register the error handler
+    application.add_error_handler(error_handler)
 
     print("Bot is ready to serve!")
     print("Press Ctrl-C to stop the bot")
+    logger.info("Bot started successfully - polling for updates")
     
-    # Start the Bot with proper shutdown handling
+    # Start the Bot with proper shutdown handling and network error recovery
     try:
-        application.run_polling(allowed_updates=Update.ALL_TYPES)
-    except (KeyboardInterrupt, SystemExit):
+        # Run polling with drop_pending_updates to avoid processing old updates
+        application.run_polling(
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True,  # Skip pending updates on restart
+            close_loop=False  # Don't close the event loop on shutdown
+        )
+    except KeyboardInterrupt:
         print("\nBot is shutting down...")
+        logger.info("Bot shutdown requested by user")
+    except SystemExit:
+        print("\nBot is shutting down...")
+        logger.info("Bot shutdown via system exit")
+    except Exception as e:
+        print(f"\nBot crashed with error: {e}")
+        logger.critical(f"Bot crashed with unexpected error: {e}", exc_info=True)
     finally:
         print("Cleanup complete. Bot stopped.")
+        logger.info("Bot stopped and cleaned up")
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -221,8 +221,18 @@ def create_comprehensive_dashboard(weeks_back: int = 8) -> BytesIO:
     transaction_types = analyze_transaction_types(weeks_back=weeks_back)
     
     # Get recent invoices for the transactions table
-    from src.analysis import get_weekly_data
-    recent_invoices = get_weekly_data(weeks_back=1)[:5]  # Get last 5 transactions
+    from src.database import get_db_session, Invoice
+    # Get the 5 most recent invoices from the database (not filtered by time)
+    session = get_db_session()
+    recent_invoices_query = session.query(Invoice).order_by(Invoice.processed_at.desc()).limit(5).all()
+    recent_invoices = []
+    for inv in recent_invoices_query:
+        recent_invoices.append({
+            'shop_name': inv.shop_name,
+            'invoice_date': inv.invoice_date,
+            'total_amount': inv.total_amount
+        })
+    session.close()
     
     # Set up the figure with a clean style
     plt.style.use('default')
