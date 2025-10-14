@@ -59,20 +59,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     
     welcome_text = (
-        "👋 Halo! Saya Asisten Keuangan Anda.\n\n"
-        "Saya dapat membantu Anda dengan dua cara:\n\n"
-        "🤖 **Chat dengan AI**\n"
-        "Tanyakan apa saja tentang pengeluaran Anda dalam Bahasa Indonesia:\n"
-        "• Berapa total pengeluaranku bulan ini?\n"
-        "• Tunjukkan toko dengan pengeluaran terbesar\n"
-        "• Bagaimana tren pengeluaranku?\n\n"
-        "📋 **Perintah Cepat**\n"
-        "Gunakan tombol di bawah untuk akses fitur:\n"
-        "• 📸 Upload invoice\n"
-        "• 📊 Lihat analisis & visualisasi\n"
-        "• 🧾 Invoice terbaru\n"
-        "• 💰 Kelola budget\n\n"
-        "Ketik /help untuk bantuan lengkap!"
+        "👋 Hello! I'm your friendly Invoice Helper Bot!\n\n"
+        "Let me help you keep track of your spending the easy way:\n"
+        "📸 Send me a photo of your receipt or invoice\n"
+        "📊 See where your money goes with simple charts\n"
+        "💰 Set and track your monthly budget\n"
+        "📋 Check your spending history\n\n"
+        "💡 Just tap any button below to get started!\n"
+        "🤖 Chat with AI for deep dive and quick summary\n\n"
+        "Need help? Type /help for more details."
     )
     await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
@@ -80,30 +75,24 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     """Send a message when the command /help is issued."""
     if not update.message:
         return
-        
+
     help_text = (
-        "📱 **Bantuan Asisten Keuangan**\n\n"
-        "**🤖 Chat dengan AI (Fitur Baru!)**\n"
-        "Tanyakan apa saja tentang pengeluaran Anda dalam Bahasa Indonesia:\n"
-        "• Berapa total pengeluaranku?\n"
-        "• Toko mana yang paling boros?\n"
-        "• Bagaimana tren pengeluaranku?\n"
-        "• Buatkan analisis lengkap!\n\n"
-        "**📋 Perintah yang Tersedia:**\n\n"
-        "📸 **Kelola Invoice:**\n"
-        "• /upload_invoice - Panduan upload invoice\n"
-        "• Kirim foto langsung - Proses otomatis\n\n"
-        "📊 **Analisis & Laporan:**\n"
-        "• /analysis - Ringkasan pengeluaran\n"
-        "• /recent_invoices - 5 invoice terbaru\n\n"
-        "💰 **Budget Management:**\n"
-        "• /set_limit [jumlah] - Set budget bulanan\n"
-        "• /check_limit - Cek status budget\n\n"
-        "🔧 **Lainnya:**\n"
-        "• /start - Menu utama\n"
-        "• /help - Panduan ini\n"
-        "• /clear - Hapus riwayat chat\n\n"
-        "💡 **Tip:** Gabungkan chat AI dengan perintah untuk pengalaman terbaik!"
+        "📱 Here's what I can help you with:\n\n"
+        "🤖 Chat with AI (New Feature!)\n"
+        "Ask anything about your spending\n\n"
+        "📸 Save & Process Receipts:\n"
+        "• Just send me a photo of any receipt or invoice\n"
+        "• Type /upload_invoice to start uploading\n\n"
+        "💰 Track Your Spending:\n"
+        "• /analysis - See your overall spending patterns and visualization\n"
+        "• /recent_invoices - Check your latest 5 expenses\n\n"
+        "🎯 Budget Management:\n"
+        "• /set_limit - Set your monthly budget\n"
+        "• /check_limit - See how much you've spent\n\n"
+        "Other Commands:\n"
+        "• /start - Return to main menu\n"
+        "• /help - Show this helpful guide\n\n"
+        "💡 Quick Tip: Just send me a photo of your receipt, and I'll do the rest!"
     )
     await update.message.reply_text(help_text)
 
@@ -266,7 +255,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     chat_history = chat_histories[user_id]
 
     # Get chatbot response
-    sent_message = await message.reply_text("🤔 Mengetik...", parse_mode='Markdown')
+    sent_message = await message.reply_text("🤔 Typing...", parse_mode='Markdown')
     response_text = run_conversation(user_message, chat_history)
     
     # Update the "Typing..." message with the actual response
@@ -297,7 +286,7 @@ async def set_limit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if not context.args:
         await update.message.reply_text(
             "Please provide your monthly spending limit in Rupiah.\n"
-            "Example: /set_limit 5000000 (for Rp 5,000,000)"
+            "Example: 5000000 (for Rp 5,000,000)"
         )
         return
         
@@ -382,9 +371,9 @@ async def clear_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     user_id = update.effective_user.id
     if user_id in chat_histories:
         chat_histories[user_id] = []
-        await update.message.reply_text("Riwayat percakapan Anda telah dihapus.")
+        await update.message.reply_text("Your chat history has been cleared.")
     else:
-        await update.message.reply_text("Tidak ada riwayat percakapan untuk dihapus.")
+        await update.message.reply_text("No chat history to clear.")
 
 async def main() -> None:
     """Start the bot."""

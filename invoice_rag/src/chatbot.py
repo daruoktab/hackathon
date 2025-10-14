@@ -321,7 +321,7 @@ def run_conversation(user_message: str, chat_history: List[Dict[str, Any]] | Non
 
     except Exception as e:
         print(f"An error occurred: {e}")
-        return "Maaf, terjadi kesalahan saat memproses permintaan Anda. Silakan coba lagi."
+        return "Sorry, there was an error processing your request. Please try again."
 
 
 # Example of how to use it
@@ -329,10 +329,10 @@ if __name__ == "__main__":
     # Simulate a conversation
     chat_history: List[Dict[str, Any]] = []
 
-    print("Chatbot: Halo! Ada yang bisa saya bantu terkait pengeluaran Anda?")
+    print("Chatbot: Hello! How can I assist you with your expenses today?")
 
     # User asks a question
-    user_input = "Berapa total pengeluaranku selama ini?"
+    user_input = "What is my total spending so far?"
     print(f"User: {user_input}")
 
     # Get chatbot response
@@ -345,7 +345,7 @@ if __name__ == "__main__":
         chat_history.append({"role": "assistant", "content": response_text})
 
     # User asks another question
-    user_input = "Tunjukkan tren pengeluaranku selama 4 minggu terakhir."
+    user_input = "Show me my spending trend for the last 4 weeks."
     print(f"User: {user_input}")
 
     response_text = run_conversation(user_input, chat_history)
