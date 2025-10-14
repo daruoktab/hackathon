@@ -1,0 +1,321 @@
+{
+  "name": "WhatsApp Message Processor",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "/webhook/whatsapp-invoice-bot",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "whatsapp-invoice-webhook"
+    },
+    {
+      "parameters": {
+        "dataPropertyName": "data",
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.data.type }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "text_message"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.data.type }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "image_message"
+            }
+          ]
+        },
+        "fallbackOutput": "unsupported"
+      },
+      "id": "message-type-switch",
+      "name": "Message Type Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/webhook/whatsapp",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"event\": \"message\",\n  \"data\": {\n    \"from\": \"{{ $json.data.from }}\",\n    \"type\": \"text\",\n    \"body\": \"{{ $json.data.body }}\",\n    \"timestamp\": \"{{ $json.data.timestamp }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "text-processor",
+      "name": "Text Message Processor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/webhook/whatsapp",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"event\": \"message\",\n  \"data\": {\n    \"from\": \"{{ $json.data.from }}\",\n    \"type\": \"image\",\n    \"id\": \"{{ $json.data.id }}\",\n    \"mediaUrl\": \"{{ $json.data.mediaUrl }}\",\n    \"timestamp\": \"{{ $json.data.timestamp }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "image-processor",
+      "name": "Image Message Processor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.response_type }}",
+              "rightValue": "text",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "response-type-check",
+      "name": "Response Type Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        900,
+        275
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/api/sessions/{{ $env.WHATSAPP_SESSION_NAME }}/chats/{{ $json.phone.replace('+', '') }}@c.us/messages/text",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WAHA_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"text\": \"{{ $json.content }}\"\n}",
+        "options": {}
+      },
+      "id": "send-text-response",
+      "name": "Send Text Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1120,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/api/sessions/{{ $env.WHATSAPP_SESSION_NAME }}/chats/{{ $json.phone.replace('+', '') }}@c.us/messages/image",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WAHA_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"file\": {\n    \"mimetype\": \"image/png\",\n    \"filename\": \"analysis.png\",\n    \"data\": \"{{ $json.image_data }}\"\n  },\n  \"caption\": \"{{ $json.content }}\"\n}",
+        "options": {}
+      },
+      "id": "send-image-response",
+      "name": "Send Image Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1120,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/webhook/whatsapp",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"event\": \"message\",\n  \"data\": {\n    \"from\": \"{{ $json.data.from }}\",\n    \"type\": \"unsupported\",\n    \"body\": \"{{ $json.data.type }}\",\n    \"timestamp\": \"{{ $json.data.timestamp }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "unsupported-processor",
+      "name": "Unsupported Message Processor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        500
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Message Type Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message Type Switch": {
+      "main": [
+        [
+          {
+            "node": "Text Message Processor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Image Message Processor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unsupported Message Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Message Processor": {
+      "main": [
+        [
+          {
+            "node": "Response Type Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Message Processor": {
+      "main": [
+        [
+          {
+            "node": "Response Type Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Response Type Check": {
+      "main": [
+        [
+          {
+            "node": "Send Text Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Image Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unsupported Message Processor": {
+      "main": [
+        [
+          {
+            "node": "Response Type Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Asia/Jakarta"
+  },
+  "versionId": "1.0.0",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "whatsapp-invoice-processor",
+  "tags": []
+}

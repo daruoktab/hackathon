@@ -23,3 +23,8 @@ requests>=2.31.0
 
 # Telegram dependencies
 python-telegram-bot
+
+# WhatsApp Bot dependencies (WAHA + n8n integration)
+aiohttp>=3.8.0
+fastapi>=0.104.0
+uvicorn>=0.24.0
