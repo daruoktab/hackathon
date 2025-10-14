@@ -6,8 +6,7 @@ Wrapper for WAHA (WhatsApp HTTP API) interactions
 
 import os
 import aiohttp
-import json
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 import base64
 
@@ -23,7 +22,7 @@ class WahaClient:
         self.api_key = os.getenv("WAHA_API_KEY")
         self.session_name = os.getenv("WHATSAPP_SESSION_NAME", "invoice_bot_session")
         
-    async def _make_request(self, method: str, endpoint: str, data: Dict[str, Any] = None) -> Optional[Dict[str, Any]]:
+    async def _make_request(self, method: str, endpoint: str, data: Dict[str, Any] | None = None) -> Optional[Dict[str, Any]]:
         """Make HTTP request to WAHA API."""
         url = f"{self.base_url}{endpoint}"
         headers = {
@@ -106,7 +105,7 @@ class WahaClient:
         result = await self._make_request("POST", f"/api/sessions/{self.session_name}/chats/{data['chatId']}/messages/text", data)
         return result is not None
 
-    async def send_image(self, phone: str, image_path: str, caption: str = None) -> bool:
+    async def send_image(self, phone: str, image_path: str, caption: str | None = None) -> bool:
         """Send image with optional caption via WhatsApp."""
         # Ensure phone number format
         if not phone.startswith("+"):

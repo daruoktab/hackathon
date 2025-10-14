@@ -14,14 +14,15 @@ from fastapi.responses import JSONResponse
 import uvicorn
 from dotenv import load_dotenv
 
-# Add project root to path
+# Add project root to path before imports
 project_root = Path(__file__).parent.parent
-sys.path.append(str(project_root))
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
-from whatsapp_bot.message_handler import WhatsAppMessageHandler
-from whatsapp_bot.waha_client import WahaClient
-from whatsapp_bot.n8n_client import N8nClient
-from whatsapp_bot.platform_database import init_platform_tables
+from whatsapp_bot.message_handler import WhatsAppMessageHandler  # noqa: E402
+from whatsapp_bot.waha_client import WahaClient  # noqa: E402
+from whatsapp_bot.n8n_client import N8nClient  # noqa: E402
+from whatsapp_bot.platform_database import init_platform_tables  # noqa: E402
 
 # Load environment variables
 load_dotenv()
@@ -129,11 +130,15 @@ async def handle_whatsapp_webhook(request: Request):
                     response['content']
                 )
             elif response.get('response_type') == 'image':
-                success = await waha_client.send_image(
-                    response['phone'],
-                    response.get('image_path'),
-                    response.get('content', '')
-                )
+                image_path = response.get('image_path')
+                if image_path:
+                    success = await waha_client.send_image(
+                        response['phone'],
+                        image_path,
+                        response.get('content', '')
+                    )
+                else:
+                    success = False
             else:
                 success = False
             

@@ -6,8 +6,7 @@ Handles database operations for both Telegram and WhatsApp platforms
 
 import sqlite3
 import os
-from typing import Optional, Dict, Any, List
-from datetime import datetime
+from typing import Optional, Dict, Any
 from src.analysis import analyze_invoices
 
 
@@ -93,7 +92,7 @@ def init_platform_tables():
 
 
 def get_or_create_platform_user(platform: str, platform_user_id: str, 
-                               display_name: str = None, phone_number: str = None) -> Optional[int]:
+                               display_name: str | None = None, phone_number: str | None = None) -> Optional[int]:
     """Get or create a platform user and return their internal user ID."""
     conn = sqlite3.connect(get_db_path())
     try:

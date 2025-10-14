@@ -6,7 +6,6 @@ Handles communication with n8n workflows
 
 import os
 import aiohttp
-import json
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 
@@ -84,7 +83,7 @@ class N8nClient:
             return None
 
     def format_whatsapp_message_for_n8n(self, phone: str, message_type: str, content: str, 
-                                       media_url: str = None) -> Dict[str, Any]:
+                                       media_url: str | None = None) -> Dict[str, Any]:
         """Format WhatsApp message data for n8n processing."""
         return {
             "platform": "whatsapp",
@@ -97,7 +96,7 @@ class N8nClient:
         }
 
     def format_bot_response_for_n8n(self, phone: str, response_type: str, 
-                                   content: str, image_path: str = None) -> Dict[str, Any]:
+                                   content: str, image_path: str | None = None) -> Dict[str, Any]:
         """Format bot response for n8n to send via WAHA."""
         return {
             "platform": "whatsapp", 
