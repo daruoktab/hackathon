@@ -20,10 +20,10 @@ from src.analysis import (
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
-def get_spending_pattern_plot() -> BytesIO:
+def get_spending_pattern_plot(weeks_back: int = 8) -> BytesIO:
     """Generate spending pattern visualization."""
     # Get data
-    weekly_data = calculate_weekly_averages(weeks_back=8)
+    weekly_data = calculate_weekly_averages(weeks_back=weeks_back)
     
     # Create figure
     plt.figure(figsize=(10, 6))
@@ -35,7 +35,7 @@ def get_spending_pattern_plot() -> BytesIO:
     
     # Plot
     plt.plot(dates, amounts, marker='o', linewidth=2)
-    plt.title('Weekly Spending Pattern', pad=20)
+    plt.title(f'Weekly Spending Pattern (Last {weeks_back} Weeks)')
     plt.xlabel('Week')
     plt.ylabel('Amount (Rp)')
     plt.xticks(rotation=45)
@@ -55,10 +55,10 @@ def get_spending_pattern_plot() -> BytesIO:
     buf.seek(0)
     return buf
 
-def get_top_vendors_plot() -> BytesIO:
+def get_top_vendors_plot(weeks_back: int | None = None) -> BytesIO:
     """Generate top vendors visualization."""
     # Get data
-    analysis = analyze_invoices()
+    analysis = analyze_invoices(weeks_back=weeks_back)
     vendors = analysis['top_vendors'][:5]  # Top 5 vendors
     
     # Create figure
@@ -70,7 +70,8 @@ def get_top_vendors_plot() -> BytesIO:
     
     # Create bar plot
     bars = plt.bar(names, totals)
-    plt.title('Top 5 Vendors by Spending', pad=20)
+    title_period = f'(Last {weeks_back} Weeks)' if weeks_back else '(All Time)'
+    plt.title(f'Top 5 Vendors by Spending {title_period}', pad=20)
     plt.xlabel('Vendor')
     plt.ylabel('Total Spending (Rp)')
     plt.xticks(rotation=45, ha='right')
@@ -91,10 +92,10 @@ def get_top_vendors_plot() -> BytesIO:
     buf.seek(0)
     return buf
 
-def get_transaction_types_plot() -> BytesIO:
+def get_transaction_types_plot(weeks_back: int = 8) -> BytesIO:
     """Generate transaction types visualization."""
     # Get data
-    analysis = analyze_transaction_types(weeks_back=8)
+    analysis = analyze_transaction_types(weeks_back=weeks_back)
     by_type = analysis['by_type']
     
     # Create figure
@@ -106,7 +107,7 @@ def get_transaction_types_plot() -> BytesIO:
     
     # Create pie chart
     plt.pie(amounts, labels=types, autopct='%1.1f%%', startangle=90)
-    plt.title('Transaction Types Distribution', pad=20)
+    plt.title(f'Transaction Types Distribution (Last {weeks_back} Weeks)', pad=20)
     
     plt.axis('equal')
     plt.tight_layout()
@@ -118,11 +119,11 @@ def get_transaction_types_plot() -> BytesIO:
     buf.seek(0)
     return buf
 
-def get_daily_pattern_plot() -> BytesIO:
+def get_daily_pattern_plot(weeks_back: int = 8) -> BytesIO:
     """Generate daily spending pattern visualization."""
     # Get data
-    weekly_data = calculate_weekly_averages(weeks_back=8)
-    trends = analyze_spending_trends(weeks_back=8)
+    weekly_data = calculate_weekly_averages(weeks_back=weeks_back)
+    trends = analyze_spending_trends(weeks_back=weeks_back)
     
     plt.figure(figsize=(10, 6))
     
@@ -133,7 +134,7 @@ def get_daily_pattern_plot() -> BytesIO:
     
     # Plot
     plt.bar(days, daily_amounts)
-    plt.title('Average Daily Spending Pattern', pad=20)
+    plt.title(f'Average Daily Spending Pattern (Last {weeks_back} Weeks)', pad=20)
     plt.xlabel('Day of Week')
     plt.ylabel('Average Amount (Rp)')
     
@@ -155,14 +156,15 @@ def get_daily_pattern_plot() -> BytesIO:
     buf.seek(0)
     return buf
 
-def create_summary_visualization() -> BytesIO:
+def create_summary_visualization(weeks_back: int | None = None) -> BytesIO:
     """Create a visualization of the invoice summary."""
     # Get data from analyze_invoices
-    analysis = analyze_invoices()
+    analysis = analyze_invoices(weeks_back=weeks_back)
     
     # Create figure with subplots
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 12), height_ratios=[1, 2])
-    fig.suptitle('Invoice Analysis Summary', fontsize=16, y=0.95)
+    title_period = f'(Last {weeks_back} Weeks)' if weeks_back else '(All Time)'
+    fig.suptitle(f'Invoice Analysis Summary {title_period}', fontsize=16, y=0.95)
     
     # Plot 1: Summary metrics
     summary_data = {
@@ -210,13 +212,13 @@ def create_summary_visualization() -> BytesIO:
     buf.seek(0)
     return buf
 
-def create_comprehensive_dashboard() -> BytesIO:
+def create_comprehensive_dashboard(weeks_back: int = 8) -> BytesIO:
     """Create a comprehensive dashboard with all invoice data in one intuitive image."""
     # Get all necessary data
-    analysis = analyze_invoices()
-    weekly_data = calculate_weekly_averages(weeks_back=8)
-    trends = analyze_spending_trends(weeks_back=8)
-    transaction_types = analyze_transaction_types(weeks_back=8)
+    analysis = analyze_invoices(weeks_back=weeks_back)
+    weekly_data = calculate_weekly_averages(weeks_back=weeks_back)
+    trends = analyze_spending_trends(weeks_back=weeks_back)
+    transaction_types = analyze_transaction_types(weeks_back=weeks_back)
     
     # Get recent invoices for the transactions table
     from src.analysis import get_weekly_data
@@ -234,7 +236,8 @@ def create_comprehensive_dashboard() -> BytesIO:
     fig = plt.figure(figsize=(16, 10), facecolor='#EAF2F8')
     
     # Create main title
-    fig.suptitle('📊 Weekly Analysis Summary', fontsize=22, fontweight='bold', y=0.98, color='#17202A')
+    title_period = f'(Last {weeks_back} Weeks)' if weeks_back else '(All Time)'
+    fig.suptitle(f'📊 Analysis Summary {title_period}', fontsize=22, fontweight='bold', y=0.98, color='#17202A')
     
     # Create grid for better layout control
     gs = fig.add_gridspec(3, 3, height_ratios=[0.8, 1.2, 1], width_ratios=[1.5, 1.5, 1],
@@ -268,7 +271,7 @@ def create_comprehensive_dashboard() -> BytesIO:
     weekly_totals = weekly_data['weekly_breakdown']
     
     if weekly_totals:
-        sorted_weeks = sorted(weekly_totals.items())[-8:]
+        sorted_weeks = sorted(weekly_totals.items())[-weeks_back:]
         dates = [item[0] for item in sorted_weeks]
         amounts = [item[1]['total'] for item in sorted_weeks]
         ranges = [item[1]['range'] for item in sorted_weeks]
@@ -433,23 +436,23 @@ def create_comprehensive_dashboard() -> BytesIO:
     return buf
 
 # Update the get_visualization function to use the new dashboard
-def get_visualization(keyword: str | None = None) -> BytesIO:
+def get_visualization(keyword: str | None = None, weeks_back: int = 8) -> BytesIO:
     """Get the visualization based on keyword."""
     if keyword == "dashboard" or keyword is None:
-        return create_comprehensive_dashboard()
+        return create_comprehensive_dashboard(weeks_back=weeks_back)
     elif keyword == "summary":
-        return create_summary_visualization()
+        return create_summary_visualization(weeks_back=weeks_back)
     elif keyword == "spending":
-        return get_spending_pattern_plot()
+        return get_spending_pattern_plot(weeks_back=weeks_back)
     elif keyword == "vendors":
-        return get_top_vendors_plot()
+        return get_top_vendors_plot(weeks_back=weeks_back)
     elif keyword == "types":
-        return get_transaction_types_plot()
+        return get_transaction_types_plot(weeks_back=weeks_back)
     elif keyword == "daily":
-        return get_daily_pattern_plot()
+        return get_daily_pattern_plot(weeks_back=weeks_back)
     else:
         # Default to comprehensive dashboard
-        return create_comprehensive_dashboard()
+        return create_comprehensive_dashboard(weeks_back=weeks_back)
 
 def get_available_visualizations() -> list:
     """Return list of available visualization keywords."""

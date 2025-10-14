@@ -12,20 +12,30 @@ def get_db_connection():
     """Get database connection"""
     return sqlite3.connect(get_db_path())
 
-def analyze_invoices():
-    """Analyze all invoices and return summary statistics."""
+def analyze_invoices(weeks_back: int | None = None):
+    """Analyze invoices and return summary statistics for a given period."""
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        
-        # Get basic stats from the simplified schema
-        cursor.execute("""
+
+        params = []
+        where_clause = ""
+        if weeks_back is not None and weeks_back > 0:
+            end_date = datetime.now()
+            start_date = end_date - timedelta(weeks=weeks_back)
+            where_clause = "WHERE invoice_date >= ?"
+            params.append(start_date.strftime('%Y-%m-%d'))
+
+        # Get basic stats
+        query = f"""
             SELECT 
                 COUNT(*) as total_invoices,
                 SUM(total_amount) as total_spent,
                 AVG(total_amount) as average_amount
             FROM invoices
-        """)
+            {where_clause}
+        """
+        cursor.execute(query, params)
         
         result = cursor.fetchone()
         if not result or result[0] == 0:
@@ -39,17 +49,22 @@ def analyze_invoices():
         total_invoices, total_spent, average_amount = result
         
         # Calculate top vendors (shops)
-        cursor.execute("""
+        vendor_where_clause = "WHERE shop_name IS NOT NULL"
+        if where_clause:
+            vendor_where_clause = f"{where_clause} AND shop_name IS NOT NULL"
+
+        query = f"""
             SELECT 
                 shop_name,
                 SUM(total_amount) as total,
                 COUNT(*) as transaction_count
             FROM invoices 
-            WHERE shop_name IS NOT NULL
+            {vendor_where_clause}
             GROUP BY shop_name 
             ORDER BY total DESC
             LIMIT 10
-        """)
+        """
+        cursor.execute(query, params)
         
         top_vendors = []
         for row in cursor.fetchall():
