@@ -1,20 +1,40 @@
-from telegram import Update
+from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 import os
 from dotenv import load_dotenv
 import sys
 import asyncio
 from pathlib import Path
-from src.processor import process_invoice
-from src.database import get_db_session, Invoice
-from src.chatbot import run_conversation  # Import the chatbot function
-from src.analysis import analyze_invoices
-from telegram_bot.spending_limits import check_spending_limit
-from telegram_bot.visualizations import get_visualization
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
+
+from src.processor import process_invoice  # noqa: E402
+from src.database import get_db_session, Invoice  # noqa: E402
+from src.chatbot import run_conversation  # noqa: E402
+from src.analysis import analyze_invoices  # noqa: E402
+from telegram_bot.spending_limits import (  # noqa: E402
+    init_spending_limits_table,
+    set_monthly_limit,
+    get_monthly_limit,
+    check_spending_limit,
+)
+from telegram_bot.visualizations import get_visualization  # noqa: E402
+
+# Ensure imports are recognized by Pylance
+__all__ = [
+    'process_invoice',
+    'get_db_session', 
+    'Invoice',
+    'run_conversation',
+    'analyze_invoices',
+    'init_spending_limits_table',
+    'set_monthly_limit',
+    'get_monthly_limit',
+    'check_spending_limit',
+    'get_visualization'
+]
 
 # Load environment variables from .env file
 load_dotenv()
@@ -30,18 +50,31 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message:
         return
 
+    keyboard = [
+        ['/upload_invoice', '/analysis'],
+        ['/recent_invoices', '/visualizations'],
+        ['/set_limit', '/check_limit'],
+        ['/help']
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    
     welcome_text = (
         "👋 Halo! Saya Asisten Keuangan Anda.\n\n"
-        "Saya dapat membantu Anda menganalisis pengeluaran dari invoice yang Anda unggah. "
-        "Ajukan pertanyaan dalam Bahasa Indonesia, dan saya akan mencoba menjawabnya.\n\n"
-        "Contoh pertanyaan:\n"
+        "Saya dapat membantu Anda dengan dua cara:\n\n"
+        "🤖 **Chat dengan AI**\n"
+        "Tanyakan apa saja tentang pengeluaran Anda dalam Bahasa Indonesia:\n"
         "• Berapa total pengeluaranku bulan ini?\n"
-        "• Tunjukkan toko dengan pengeluaran terbesar.\n"
-        "• Bagaimana tren pengeluaranku selama 4 minggu terakhir?\n\n"
-        "Anda juga bisa mengirim foto invoice untuk diproses. "
-        "Ketik /help untuk bantuan lebih lanjut."
+        "• Tunjukkan toko dengan pengeluaran terbesar\n"
+        "• Bagaimana tren pengeluaranku?\n\n"
+        "📋 **Perintah Cepat**\n"
+        "Gunakan tombol di bawah untuk akses fitur:\n"
+        "• 📸 Upload invoice\n"
+        "• 📊 Lihat analisis & visualisasi\n"
+        "• 🧾 Invoice terbaru\n"
+        "• 💰 Kelola budget\n\n"
+        "Ketik /help untuk bantuan lengkap!"
     )
-    await update.message.reply_text(welcome_text)
+    await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
@@ -50,16 +83,28 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
     help_text = (
         "📱 **Bantuan Asisten Keuangan**\n\n"
-        "Berikut adalah hal-hal yang bisa saya lakukan:\n\n"
-        "**1. Mengobrol tentang Pengeluaran Anda**\n"
-        "Tanyakan apa saja tentang data invoice Anda dalam Bahasa Indonesia. Saya akan mencoba menjawabnya berdasarkan data yang ada.\n"
-        "Contoh: `Bagaimana ringkasan pengeluaranku?`\n\n"
-        "**2. Memproses Invoice Baru**\n"
-        "Kirimkan foto invoice atau struk yang jelas, dan saya akan memprosesnya secara otomatis untuk ditambahkan ke dalam analisis Anda.\n\n"
-        "**Perintah yang Tersedia:**\n"
-        "• `/start` - Menampilkan pesan selamat datang.\n"
-        "• `/help` - Menampilkan panduan ini.\n"
-        "• `/clear` - Menghapus riwayat percakapan Anda dengan saya."
+        "**🤖 Chat dengan AI (Fitur Baru!)**\n"
+        "Tanyakan apa saja tentang pengeluaran Anda dalam Bahasa Indonesia:\n"
+        "• Berapa total pengeluaranku?\n"
+        "• Toko mana yang paling boros?\n"
+        "• Bagaimana tren pengeluaranku?\n"
+        "• Buatkan analisis lengkap!\n\n"
+        "**📋 Perintah yang Tersedia:**\n\n"
+        "📸 **Kelola Invoice:**\n"
+        "• /upload_invoice - Panduan upload invoice\n"
+        "• Kirim foto langsung - Proses otomatis\n\n"
+        "📊 **Analisis & Laporan:**\n"
+        "• /analysis - Ringkasan pengeluaran\n"
+        "• /visualizations - Dashboard grafik\n"
+        "• /recent_invoices - 5 invoice terbaru\n\n"
+        "💰 **Budget Management:**\n"
+        "• /set_limit [jumlah] - Set budget bulanan\n"
+        "• /check_limit - Cek status budget\n\n"
+        "🔧 **Lainnya:**\n"
+        "• /start - Menu utama\n"
+        "• /help - Panduan ini\n"
+        "• /clear - Hapus riwayat chat\n\n"
+        "💡 **Tip:** Gabungkan chat AI dengan perintah untuk pengalaman terbaik!"
     )
     await update.message.reply_text(help_text)
 
@@ -245,6 +290,91 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     chat_history.append({"role": "assistant", "content": response_text})
     chat_histories[user_id] = chat_history  # Save back to main dict
 
+async def set_limit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle the set limit command."""
+    if not update.message or not update.effective_user:
+        return
+        
+    if not context.args:
+        await update.message.reply_text(
+            "Please provide your monthly spending limit in Rupiah.\n"
+            "Example: /set_limit 5000000 (for Rp 5,000,000)"
+        )
+        return
+        
+    try:
+        limit = float(context.args[0])
+        if limit <= 0:
+            await update.message.reply_text("❌ Spending limit must be greater than 0.")
+            return
+            
+        if set_monthly_limit(update.effective_user.id, limit):
+            await update.message.reply_text(
+                f"✅ Monthly spending limit set to Rp {limit:,.2f}\n\n"
+                f"You'll be notified when your spending approaches or exceeds this limit."
+            )
+        else:
+            await update.message.reply_text("❌ Failed to set spending limit. Please try again.")
+            
+    except ValueError:
+        await update.message.reply_text("❌ Please provide a valid number for the spending limit.")
+
+async def check_limit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle the check limit command."""
+    if not update.message or not update.effective_user:
+        return
+    
+    # Get monthly limit
+    monthly_limit = get_monthly_limit(update.effective_user.id)
+    if not monthly_limit:
+        await update.message.reply_text("No spending limit set. Use /set_limit to set one.")
+        return
+    
+    # Get total spent from analyze_invoices
+    try:
+        analysis = analyze_invoices()
+        total_spent = analysis['total_spent']
+        
+        # Calculate percentage and remaining
+        percentage_used = (total_spent / monthly_limit) * 100
+        remaining = monthly_limit - total_spent
+        
+        # Determine status indicator
+        if percentage_used >= 100:
+            indicator = "🚫"  # Red cross for over limit
+        elif percentage_used >= 90:
+            indicator = "⚠️"  # Warning for near limit
+        elif percentage_used >= 75:
+            indicator = "⚡"  # Getting close
+        else:
+            indicator = "✅"  # Good standing
+        
+        # Format message
+        message = (
+            f"{indicator} Monthly Spending Status\n\n"
+            f"Monthly Limit: Rp {monthly_limit:,.2f}\n"
+            f"Total Spent: Rp {total_spent:,.2f}\n"
+            f"Remaining: Rp {remaining:,.2f}\n"
+            f"Usage: {percentage_used:.1f}%"
+        )
+        
+        await update.message.reply_text(message)
+        
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error checking limit: {str(e)}")
+
+async def visualizations_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send visualization dashboard to user."""
+    if not update.message:
+        return
+        
+    try:
+        await update.message.reply_text("📊 Generating your comprehensive analysis dashboard...")
+        buf = get_visualization()
+        await update.message.reply_photo(buf)
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error generating visualization: {str(e)}")
+
 async def clear_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Clears the user's chat history."""
     if not update.effective_user or not update.message:
@@ -264,6 +394,9 @@ async def main() -> None:
     if not TOKEN:
         print("Error: TELEGRAM_BOT_TOKEN not found in environment variables")
         return
+    
+    # Initialize spending limits table
+    init_spending_limits_table()
         
     # Create the Application and pass it your bot's token
     application = Application.builder().token(TOKEN).build()
@@ -271,6 +404,12 @@ async def main() -> None:
     # Add command handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("analysis", analysis_command))
+    application.add_handler(CommandHandler("recent_invoices", recent_invoices))
+    application.add_handler(CommandHandler("upload_invoice", upload_invoice))
+    application.add_handler(CommandHandler("visualizations", visualizations_command))
+    application.add_handler(CommandHandler("set_limit", set_limit_command))
+    application.add_handler(CommandHandler("check_limit", check_limit_command))
     application.add_handler(CommandHandler("clear", clear_command))
     
     # Handle photo messages (invoice images)

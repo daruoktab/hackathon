@@ -22,18 +22,18 @@ if not groq_api_key:
 
 client = Groq(api_key=groq_api_key)
 
-# --- System Prompt in Bahasa Indonesia ---
+# --- System Prompt in English ---
 SYSTEM_PROMPT = """
-Anda adalah "Asisten Keuangan", chatbot AI yang ramah dan membantu. Tujuan Anda adalah membantu pengguna memahami pengeluaran mereka dengan menganalisis data invoice mereka.
+You are a "Financial Assistant", a friendly and helpful AI chatbot. Your goal is to help users understand their spending by analyzing their invoice data.
 
-PERATURAN UTAMA:
-1.  **Selalu Berbahasa Indonesia**: Berkomunikasi secara eksklusif dalam Bahasa Indonesia yang alami dan sopan.
-2.  **Fokus pada Data**: Jawaban Anda harus didasarkan pada fungsi yang tersedia. Jangan membuat informasi atau memberikan saran keuangan di luar data yang diberikan.
-3.  **Gunakan Fungsi yang Ada**: Untuk menjawab pertanyaan pengguna, panggil fungsi yang relevan. Jangan menjawab jika tidak ada fungsi yang sesuai.
-4.  **Sapa Pengguna**: Mulai setiap percakapan dengan sapaan ramah, misalnya, "Halo! Ada yang bisa saya bantu terkait pengeluaran Anda?"
-5.  **Klarifikasi jika Perlu**: Jika permintaan pengguna tidak jelas, ajukan pertanyaan untuk klarifikasi. Contoh: "Untuk periode berapa lama Anda ingin melihat ringkasan pengeluaran?"
-6.  **Ringkas dan Jelas**: Sajikan data dalam format yang mudah dibaca. Gunakan daftar (bullet points) atau ringkasan singkat.
-7.  **Jangan Memberi Nasihat Finansial**: Anda hanya seorang analis data, bukan penasihat keuangan. Hindari memberikan rekomendasi atau nasihat.
+MAIN RULES:
+1.  **Always Speak in English**: Communicate exclusively in natural and polite English.
+2.  **Focus on Data**: Your answers should be based on available functions. Don't make up information or provide financial advice beyond the given data.
+3.  **Use Available Functions**: To answer user questions, call relevant functions. Don't answer if there's no suitable function.
+4.  **Greet Users**: Start each conversation with a friendly greeting, for example, "Hello! How can I help you with your spending today?"
+5.  **Clarify if Needed**: If the user's request is unclear, ask clarifying questions. Example: "For what time period would you like to see your spending summary?"
+6.  **Be Concise and Clear**: Present data in an easy-to-read format. Use bullet points or brief summaries.
+7.  **Don't Give Financial Advice**: You are a data analyst, not a financial advisor. Avoid making recommendations or giving advice.
 """
 
 # --- Tools Definition (Function Calling) ---
@@ -42,13 +42,13 @@ tools: List[Dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "get_invoice_summary",
-            "description": "Dapatkan ringkasan umum dari semua invoice, seperti total pengeluaran dan jumlah invoice.",
+            "description": "Get a general summary of all invoices, including total spending and number of invoices.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "weeks_back": {
                         "type": "integer",
-                        "description": "Jumlah minggu ke belakang untuk dianalisis (misal: 4 untuk 1 bulan terakhir). Jika tidak diisi, akan menganalisis semua data.",
+                        "description": "Number of weeks back to analyze (e.g., 4 for last month). If not specified, will analyze all data.",
                     }
                 },
                 "required": [],
@@ -59,14 +59,14 @@ tools: List[Dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "get_spending_trends",
-            "description": "Analisis tren pengeluaran selama beberapa minggu terakhir untuk melihat apakah pengeluaran naik, turun, atau stabil.",
+            "description": "Analyze spending trends over recent weeks to see if spending is increasing, decreasing, or stable.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "weeks_back": {
                         "type": "integer",
                         "default": 4,
-                        "description": "Jumlah minggu untuk dianalisis, defaultnya 4.",
+                        "description": "Number of weeks to analyze, default is 4.",
                     }
                 },
                 "required": [],
@@ -77,13 +77,13 @@ tools: List[Dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "get_top_spending_categories",
-            "description": "Cari tahu di mana pengguna paling banyak menghabiskan uang, diurutkan berdasarkan toko atau vendor.",
+            "description": "Find out where the user spends the most money, sorted by store or vendor.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "weeks_back": {
                         "type": "integer",
-                        "description": "Jumlah minggu ke belakang untuk dianalisis. Jika tidak diisi, akan menganalisis semua data.",
+                        "description": "Number of weeks back to analyze. If not specified, will analyze all data.",
                     }
                 },
                 "required": [],
@@ -94,14 +94,14 @@ tools: List[Dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "get_comprehensive_analysis",
-            "description": "Dapatkan laporan analisis keuangan yang lengkap dan komprehensif untuk periode waktu tertentu.",
+            "description": "Get a complete and comprehensive financial analysis report for a specific time period.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "weeks_back": {
                         "type": "integer",
                         "default": 4,
-                        "description": "Jumlah minggu untuk dianalisis, defaultnya 4.",
+                        "description": "Number of weeks to analyze, default is 4.",
                     }
                 },
                 "required": [],
