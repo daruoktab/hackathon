@@ -2,21 +2,18 @@ import os
 import json
 from groq import Groq
 from dotenv import load_dotenv
-from typing import List, Dict, Any, Callable
+from typing import List, Dict, Any, cast, Iterable
+from groq.types.chat.chat_completion_message_param import ChatCompletionMessageParam
+from groq.types.chat.chat_completion_tool_param import ChatCompletionToolParam
+from src.analysis import (
+    analyze_invoices,
+    analyze_spending_trends,
+    find_biggest_spending_categories,
+    generate_comprehensive_analysis,
+)
 
 # Load environment variables
 load_dotenv()
-
-# Import analysis functions
-from src.analysis import (
-    analyze_invoices,
-    calculate_weekly_averages,
-    analyze_spending_trends,
-    find_biggest_spending_categories,
-    analyze_item_spending,
-    analyze_transaction_types,
-    generate_comprehensive_analysis,
-)
 
 # Initialize Groq client
 groq_api_key = os.environ.get("GROQ_API_KEY")
@@ -40,7 +37,7 @@ PERATURAN UTAMA:
 """
 
 # --- Tools Definition (Function Calling) ---
-tools = [
+tools: List[Dict[str, Any]] = [
     {
         "type": "function",
         "function": {
@@ -122,14 +119,14 @@ AVAILABLE_FUNCTIONS = {
 }
 
 
-def run_conversation(user_message: str, chat_history: List[Dict[str, str]] = None) -> str:
+def run_conversation(user_message: str, chat_history: List[Dict[str, Any]] | None = None) -> str:
     """
     Runs a conversation with the LLM, including function calling.
     """
     if chat_history is None:
         chat_history = []
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages: List[Dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
     messages.extend(chat_history)
     messages.append({"role": "user", "content": user_message})
 
@@ -137,8 +134,8 @@ def run_conversation(user_message: str, chat_history: List[Dict[str, str]] = Non
         # First API call to get the tool choice
         response = client.chat.completions.create(
             model="meta-llama/llama-4-scout-17b-16e-instruct",
-            messages=messages,
-            tools=tools,
+            messages=cast(Iterable[ChatCompletionMessageParam], messages),
+            tools=cast(Iterable[ChatCompletionToolParam], tools),
             tool_choice="auto",
         )
 
@@ -147,7 +144,7 @@ def run_conversation(user_message: str, chat_history: List[Dict[str, str]] = Non
 
         # If the model wants to call a function
         if tool_calls:
-            messages.append(response_message)  # Extend conversation with assistant's reply
+            messages.append(response_message.model_dump(exclude_unset=True))  # Extend conversation with assistant's reply
 
             # Execute all tool calls
             for tool_call in tool_calls:
@@ -183,13 +180,13 @@ def run_conversation(user_message: str, chat_history: List[Dict[str, str]] = Non
             # Second API call to get the final response
             final_response = client.chat.completions.create(
                 model="meta-llama/llama-4-scout-17b-16e-instruct",
-                messages=messages,
+                messages=cast(Iterable[ChatCompletionMessageParam], messages),
             )
 
-            return final_response.choices[0].message.content
+            return final_response.choices[0].message.content or ""
         else:
             # If no tool is called, return the direct response
-            return response_message.content
+            return response_message.content or ""
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -199,7 +196,7 @@ def run_conversation(user_message: str, chat_history: List[Dict[str, str]] = Non
 # Example of how to use it
 if __name__ == "__main__":
     # Simulate a conversation
-    chat_history = []
+    chat_history: List[Dict[str, Any]] = []
 
     print("Chatbot: Halo! Ada yang bisa saya bantu terkait pengeluaran Anda?")
 
@@ -213,7 +210,8 @@ if __name__ == "__main__":
 
     # Update history
     chat_history.append({"role": "user", "content": user_input})
-    chat_history.append({"role": "assistant", "content": response_text})
+    if response_text:
+        chat_history.append({"role": "assistant", "content": response_text})
 
     # User asks another question
     user_input = "Tunjukkan tren pengeluaranku selama 4 minggu terakhir."

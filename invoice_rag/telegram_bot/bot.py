@@ -8,6 +8,9 @@ from pathlib import Path
 from src.processor import process_invoice
 from src.database import get_db_session, Invoice
 from src.chatbot import run_conversation  # Import the chatbot function
+from src.analysis import analyze_invoices
+from telegram_bot.spending_limits import check_spending_limit
+from telegram_bot.visualizations import get_visualization
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent
@@ -204,8 +207,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not update.message or not update.message.text or not update.effective_user:
         return
 
+    message = update.message
     user_id = update.effective_user.id
-    user_message = update.message.text
+    user_message = message.text
+    
+    # Ensure user_message is not None
+    if not user_message:
+        return
 
     # Get or create chat history for the user
     if user_id not in chat_histories:
@@ -214,21 +222,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     chat_history = chat_histories[user_id]
 
     # Get chatbot response
-    await update.message.reply_text("🤔 Mengetik...", parse_mode='Markdown')
+    sent_message = await message.reply_text("🤔 Mengetik...", parse_mode='Markdown')
     response_text = run_conversation(user_message, chat_history)
     
     # Update the "Typing..." message with the actual response
-    if update.message.message_id:
+    if sent_message and sent_message.message_id:
         try:
             # Edit the "Typing..." message with the final response
             await context.bot.edit_message_text(
-                chat_id=update.message.chat_id,
-                message_id=update.message.message_id + 1, # The "Typing..." message
+                chat_id=message.chat_id,
+                message_id=sent_message.message_id, # The "Typing..." message
                 text=response_text
             )
         except Exception:
              # Fallback to sending a new message if editing fails
-            await update.message.reply_text(response_text)
+            await message.reply_text(response_text)
+    else:
+        await message.reply_text(response_text)
 
     # Update chat history
     chat_history.append({"role": "user", "content": user_message})
@@ -237,7 +247,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def clear_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Clears the user's chat history."""
-    if not update.effective_user:
+    if not update.effective_user or not update.message:
         return
     
     user_id = update.effective_user.id
