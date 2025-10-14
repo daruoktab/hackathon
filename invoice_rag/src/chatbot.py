@@ -11,6 +11,8 @@ from src.analysis import (
     find_biggest_spending_categories,
     generate_comprehensive_analysis,
 )
+from src.database import get_db_session, Invoice
+from telegram_bot.spending_limits import get_monthly_limit
 
 # Load environment variables
 load_dotenv()
@@ -29,11 +31,17 @@ You are a "Financial Assistant", a friendly and helpful AI chatbot. Your goal is
 MAIN RULES:
 1.  **Always Speak in English**: Communicate exclusively in natural and polite English.
 2.  **Focus on Data**: Your answers should be based on available functions. Don't make up information or provide financial advice beyond the given data.
-3.  **Use Available Functions**: To answer user questions, call relevant functions. Don't answer if there's no suitable function.
+3.  **Use Available Functions**: To answer user questions, call relevant functions. Available functions include:
+    - Invoice summaries and analysis
+    - Spending trends and patterns
+    - Recent invoices list
+    - Budget/spending limit status
+    - Visual charts and graphs (via /visualizations command)
 4.  **Greet Users**: Start each conversation with a friendly greeting, for example, "Hello! How can I help you with your spending today?"
 5.  **Clarify if Needed**: If the user's request is unclear, ask clarifying questions. Example: "For what time period would you like to see your spending summary?"
 6.  **Be Concise and Clear**: Present data in an easy-to-read format. Use bullet points or brief summaries.
 7.  **Don't Give Financial Advice**: You are a data analyst, not a financial advisor. Avoid making recommendations or giving advice.
+8.  **Guide to Commands**: When users want to see visualizations/charts, or upload invoices, guide them to use the appropriate commands (/visualizations, /analysis, /upload_invoice, etc.).
 """
 
 # --- Tools Definition (Function Calling) ---
@@ -108,7 +116,127 @@ tools: List[Dict[str, Any]] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_recent_invoices_list",
+            "description": "Get a list of the most recent invoices/receipts. Shows the last 5 invoices with date, shop name, and amount.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "default": 5,
+                        "description": "Number of recent invoices to retrieve, default is 5.",
+                    }
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_spending_limit_status",
+            "description": "Check the user's monthly spending limit status, including how much they've spent, remaining budget, and percentage used.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "user_id": {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "User ID (optional, defaults to 0 for single-user mode).",
+                    }
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_visualization_available",
+            "description": "Check if visual charts and graphs are available. Use this when the user asks to 'see' or 'show' charts, graphs, or visual analysis.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        },
+    },
 ]
+
+# --- Helper Functions for Bot Commands ---
+def get_recent_invoices_list(limit: int = 5) -> Dict[str, Any]:
+    """Get a list of recent invoices."""
+    try:
+        session = get_db_session()
+        invoices = session.query(Invoice).order_by(Invoice.processed_at.desc()).limit(limit).all()
+        
+        if not invoices:
+            return {"success": False, "message": "No invoices found in the database."}
+        
+        invoice_list = []
+        for inv in invoices:
+            invoice_list.append({
+                "date": inv.invoice_date or "Unknown date",
+                "shop": inv.shop_name,
+                "amount": f"Rp {inv.total_amount:,.2f}"
+            })
+        
+        return {"success": True, "invoices": invoice_list, "count": len(invoice_list)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def get_spending_limit_status(user_id: int = 0) -> Dict[str, Any]:
+    """Get the current spending limit status."""
+    try:
+        monthly_limit = get_monthly_limit(user_id)
+        if not monthly_limit:
+            return {"success": False, "message": "No spending limit set. User should use /set_limit to set one."}
+        
+        analysis = analyze_invoices()
+        total_spent = analysis['total_spent']
+        
+        percentage_used = (total_spent / monthly_limit) * 100
+        remaining = monthly_limit - total_spent
+        
+        # Determine status
+        if percentage_used >= 100:
+            status = "Over limit"
+        elif percentage_used >= 90:
+            status = "Near limit"
+        elif percentage_used >= 75:
+            status = "Getting close"
+        else:
+            status = "Good standing"
+        
+        return {
+            "success": True,
+            "monthly_limit": f"Rp {monthly_limit:,.2f}",
+            "total_spent": f"Rp {total_spent:,.2f}",
+            "remaining": f"Rp {remaining:,.2f}",
+            "percentage_used": f"{percentage_used:.1f}%",
+            "status": status
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def get_visualization_available() -> Dict[str, Any]:
+    """Check if visualization is available and provide guidance."""
+    return {
+        "success": True,
+        "message": "A comprehensive visual dashboard is available! Ask the user to type /visualizations or /analysis to see charts and graphs of their spending patterns.",
+        "available_visualizations": [
+            "Monthly spending trends",
+            "Top spending categories",
+            "Spending by vendor",
+            "Weekly spending patterns"
+        ]
+    }
+
 
 # --- Function Mapping ---
 AVAILABLE_FUNCTIONS = {
@@ -116,6 +244,9 @@ AVAILABLE_FUNCTIONS = {
     "get_spending_trends": analyze_spending_trends,
     "get_top_spending_categories": find_biggest_spending_categories,
     "get_comprehensive_analysis": generate_comprehensive_analysis,
+    "get_recent_invoices_list": get_recent_invoices_list,
+    "get_spending_limit_status": get_spending_limit_status,
+    "get_visualization_available": get_visualization_available,
 }
 
 

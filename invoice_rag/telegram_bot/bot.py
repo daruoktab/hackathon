@@ -52,7 +52,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     keyboard = [
         ['/upload_invoice', '/analysis'],
-        ['/recent_invoices', '/visualizations'],
+        ['/recent_invoices'],
         ['/set_limit', '/check_limit'],
         ['/help']
     ]
@@ -95,7 +95,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "• Kirim foto langsung - Proses otomatis\n\n"
         "📊 **Analisis & Laporan:**\n"
         "• /analysis - Ringkasan pengeluaran\n"
-        "• /visualizations - Dashboard grafik\n"
         "• /recent_invoices - 5 invoice terbaru\n\n"
         "💰 **Budget Management:**\n"
         "• /set_limit [jumlah] - Set budget bulanan\n"
@@ -407,7 +406,6 @@ async def main() -> None:
     application.add_handler(CommandHandler("analysis", analysis_command))
     application.add_handler(CommandHandler("recent_invoices", recent_invoices))
     application.add_handler(CommandHandler("upload_invoice", upload_invoice))
-    application.add_handler(CommandHandler("visualizations", visualizations_command))
     application.add_handler(CommandHandler("set_limit", set_limit_command))
     application.add_handler(CommandHandler("check_limit", check_limit_command))
     application.add_handler(CommandHandler("clear", clear_command))
