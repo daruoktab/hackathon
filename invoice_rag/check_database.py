@@ -3,16 +3,15 @@ Database inspection and validation script
 Compares database contents with the visualization
 """
 import sys
+import os
 from pathlib import Path
 from datetime import datetime, timedelta
-import os
 
 # Add project root to path
 project_root = Path(__file__).parent
 sys.path.append(str(project_root))
 
-from src.database import get_db_session, Invoice, InvoiceItem
-from src.analysis import analyze_invoices
+from src.database import get_db_session, Invoice, InvoiceItem  # noqa: E402
 
 def format_currency(amount):
     """Format amount as Indonesian Rupiah"""
@@ -66,9 +65,9 @@ def check_database():
     # Get all invoices
     invoices = session.query(Invoice).order_by(Invoice.processed_at.desc()).all()
     
-    # Calculate totals
-    total_spent = sum(inv.total_amount for inv in invoices)
-    avg_amount = total_spent / len(invoices) if invoices else 0
+    # Calculate totals - SQLAlchemy returns actual float values at runtime
+    total_spent: float = sum(float(inv.total_amount) for inv in invoices)  # type: ignore[arg-type]
+    avg_amount: float = total_spent / len(invoices) if invoices else 0.0
     
     print("=" * 70)
     print("FINANCIAL SUMMARY")
@@ -88,32 +87,32 @@ def check_database():
     expected_avg = 163e3  # Rp 163K
     
     # Check total spent
-    print(f"Total Spent:")
+    print("Total Spent:")
     print(f"  Expected: {format_currency(expected_total)}")
     print(f"  Actual:   {format_currency(total_spent)}")
     if abs(total_spent - expected_total) < 1000:  # Within 1K tolerance
-        print(f"  Status:   ✅ MATCH")
+        print("  Status:   ✅ MATCH")
     else:
         diff = total_spent - expected_total
         print(f"  Status:   ⚠️  DIFFERENCE: {format_currency(abs(diff))} ({'more' if diff > 0 else 'less'})")
     print()
     
     # Check invoice count
-    print(f"Invoice Count:")
+    print("Invoice Count:")
     print(f"  Expected: {expected_count}")
     print(f"  Actual:   {total_invoices}")
     if total_invoices == expected_count:
-        print(f"  Status:   ✅ MATCH")
+        print("  Status:   ✅ MATCH")
     else:
         print(f"  Status:   ⚠️  DIFFERENCE: {abs(total_invoices - expected_count)} {'more' if total_invoices > expected_count else 'fewer'}")
     print()
     
     # Check average
-    print(f"Average Amount:")
+    print("Average Amount:")
     print(f"  Expected: {format_currency(expected_avg)}")
     print(f"  Actual:   {format_currency(avg_amount)}")
     if abs(avg_amount - expected_avg) < 1000:  # Within 1K tolerance
-        print(f"  Status:   ✅ MATCH")
+        print("  Status:   ✅ MATCH")
     else:
         diff = avg_amount - expected_avg
         print(f"  Status:   ⚠️  DIFFERENCE: {format_currency(abs(diff))} ({'higher' if diff > 0 else 'lower'})")
@@ -133,9 +132,11 @@ def check_database():
     
     # Get actual vendors
     from collections import defaultdict
-    vendor_totals = defaultdict(float)
+    vendor_totals: dict[str, float] = defaultdict(float)
     for inv in invoices:
-        vendor_totals[inv.shop_name] += inv.total_amount
+        # Type ignore for SQLAlchemy column access - returns str at runtime
+        vendor_name = str(inv.shop_name) if inv.shop_name is not None else ""  # type: ignore[arg-type]
+        vendor_totals[vendor_name] += float(inv.total_amount)  # type: ignore[arg-type]
     
     # Sort by amount
     sorted_vendors = sorted(vendor_totals.items(), key=lambda x: x[1], reverse=True)
@@ -156,7 +157,7 @@ def check_database():
         if actual_top.lower() == expected_top.lower() or expected_top.lower() in actual_top.lower():
             print(f"✅ Top vendor matches: {actual_top}")
         else:
-            print(f"⚠️  Top vendor mismatch:")
+            print("⚠️  Top vendor mismatch:")
             print(f"   Expected: {expected_top}")
             print(f"   Actual:   {actual_top}")
     
@@ -193,15 +194,16 @@ def check_database():
     print("DATE RANGE ANALYSIS")
     print("=" * 70)
     
-    dates_with_data = [inv for inv in invoices if inv.invoice_date]
+    # Type ignore for SQLAlchemy column access - returns str | None at runtime
+    dates_with_data = [inv for inv in invoices if inv.invoice_date is not None]  # type: ignore[arg-type]
     if dates_with_data:
         try:
-            invoice_dates = [datetime.strptime(inv.invoice_date, "%Y-%m-%d") for inv in dates_with_data]
+            invoice_dates = [datetime.strptime(str(inv.invoice_date), "%Y-%m-%d") for inv in dates_with_data]  # type: ignore[arg-type]
             oldest = min(invoice_dates)
             newest = max(invoice_dates)
             date_range = (newest - oldest).days
             
-            print(f"📅 Date Range:")
+            print("📅 Date Range:")
             print(f"   Oldest: {oldest.strftime('%Y-%m-%d')}")
             print(f"   Newest: {newest.strftime('%Y-%m-%d')}")
             print(f"   Span: {date_range} days")
@@ -223,9 +225,9 @@ def check_database():
     print("CATEGORY ANALYSIS")
     print("=" * 70)
     
-    # Category distribution
+    # Category distribution - type ignore for SQLAlchemy column access
     from collections import Counter
-    categories = Counter(inv.transaction_type for inv in invoices if inv.transaction_type)
+    categories = Counter(str(inv.transaction_type) for inv in invoices if inv.transaction_type is not None)  # type: ignore[arg-type]
     
     if categories:
         print("\nTransaction Types:")
@@ -234,10 +236,11 @@ def check_database():
             print(f"  {cat.capitalize()}: {count} ({percentage:.1f}%)")
         
         # From image: 100% Retail
-        if categories.get('retail', 0) == total_invoices:
+        retail_count = categories.get('retail', 0)
+        if retail_count == total_invoices:
             print("\n✅ Matches image: 100% Retail")
         else:
-            print(f"\n⚠️  Image shows 100% Retail, but actual distribution differs")
+            print("\n⚠️  Image shows 100% Retail, but actual distribution differs")
     else:
         print("⚠️  No transaction type information available")
     
