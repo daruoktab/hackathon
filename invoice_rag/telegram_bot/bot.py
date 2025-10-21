@@ -45,6 +45,12 @@ TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 # In-memory chat history storage
 chat_histories = {}
 
+# Chat mode state (per user) - Default: False (off) to save API costs
+chat_modes = {}
+
+# Maximum chat history to keep (prevent token overflow)
+MAX_HISTORY = 10  # Keep last 10 exchanges (20 messages)
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a welcome message when the command /start is issued."""
     if not update.message:
@@ -78,8 +84,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     help_text = (
         "📱 Here's what I can help you with:\n\n"
-        "🤖 Chat with AI (New Feature!)\n"
-        "Ask anything about your spending\n\n"
+        "💬 AI Chat Features:\n"
+        "• /chat <message> - Ask AI one-off questions\n"
+        "  Example: /chat What's my total spending?\n"
+        "• /chatmode on - Enable continuous chat (uses API credits)\n"
+        "• /chatmode off - Disable chat mode (save costs)\n"
+        "• /chatmode - Check current status\n\n"
         "📸 Save & Process Receipts:\n"
         "• Just send me a photo of any receipt or invoice\n"
         "• Type /upload_invoice to start uploading\n\n"
@@ -91,8 +101,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "• /check_limit - See how much you've spent\n\n"
         "Other Commands:\n"
         "• /start - Return to main menu\n"
-        "• /help - Show this helpful guide\n\n"
-        "💡 Quick Tip: Just send me a photo of your receipt, and I'll do the rest!"
+        "• /help - Show this helpful guide\n"
+        "• /clear - Clear chat history\n\n"
+        "💡 Quick Tips:\n"
+        "• Chat mode is OFF by default (saves API costs)\n"
+        "• Use /chat for quick AI questions\n"
+        "• Send photos directly - no command needed!"
     )
     await update.message.reply_text(help_text)
 
@@ -247,6 +261,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     # Ensure user_message is not None
     if not user_message:
         return
+    
+    # Check if chat mode is enabled for this user
+    chat_mode_enabled = chat_modes.get(user_id, False)
+    
+    if not chat_mode_enabled:
+        # Chat mode is off - send helpful message without using LLM
+        await message.reply_text(
+            "💬 Hey! Chat mode is OFF right now.\n\n"
+            "Quick options:\n"
+            "• /chat <your question> - Ask me anything\n"
+            "• /chatmode on - Let's have a conversation!\n"
+            "• /help - See what I can do"
+        )
+        return
 
     # Get or create chat history for the user
     if user_id not in chat_histories:
@@ -276,6 +304,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     # Update chat history
     chat_history.append({"role": "user", "content": user_message})
     chat_history.append({"role": "assistant", "content": response_text})
+    
+    # Truncate history if too long
+    if len(chat_history) > MAX_HISTORY * 2:
+        chat_history = chat_history[-(MAX_HISTORY * 2):]
+    
     chat_histories[user_id] = chat_history  # Save back to main dict
 
 async def set_limit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -374,6 +407,103 @@ async def clear_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await update.message.reply_text("Your chat history has been cleared.")
     else:
         await update.message.reply_text("No chat history to clear.")
+
+async def chatmode_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Toggle chat mode on or off."""
+    if not update.effective_user or not update.message:
+        return
+    
+    user_id = update.effective_user.id
+    
+    # Check if user provided on/off argument
+    if not context.args or len(context.args) == 0:
+        # Show current status
+        current_mode = chat_modes.get(user_id, False)
+        status = "ON ✅" if current_mode else "OFF ❌"
+        await update.message.reply_text(
+            f"💬 Chat Mode Status: {status}\n\n"
+            f"Usage:\n"
+            f"• /chatmode on - Enable continuous chat\n"
+            f"• /chatmode off - Disable (save API costs)\n"
+            f"• /chat <message> - One-off AI query (works anytime)"
+        )
+        return
+    
+    mode = context.args[0].lower()
+    
+    if mode == "on":
+        chat_modes[user_id] = True
+        await update.message.reply_text(
+            "✅ Chat mode enabled!\n\n"
+            "I'll now respond to all your messages. Just type naturally.\n"
+            "Use /chatmode off to disable."
+        )
+    elif mode == "off":
+        chat_modes[user_id] = False
+        await update.message.reply_text(
+            "❌ Chat mode disabled.\n\n"
+            "I'll only respond to commands now.\n"
+            "Use /chat <message> for one-off AI queries."
+        )
+    else:
+        await update.message.reply_text(
+            "Invalid option. Use:\n"
+            "• /chatmode on\n"
+            "• /chatmode off"
+        )
+
+async def chat_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle one-off chat queries without enabling chat mode."""
+    if not update.message or not update.effective_user:
+        return
+    
+    user_id = update.effective_user.id
+    
+    # Check if user provided a message
+    if not context.args or len(context.args) == 0:
+        await update.message.reply_text(
+            "Please provide a message after /chat\n\n"
+            "Example: /chat What's my total spending?"
+        )
+        return
+    
+    # Join all arguments as the user message
+    user_message = " ".join(context.args)
+    
+    # Get or create chat history
+    if user_id not in chat_histories:
+        chat_histories[user_id] = []
+    
+    chat_history = chat_histories[user_id]
+    
+    # Show typing indicator
+    sent_message = await update.message.reply_text("🤔 Thinking...", parse_mode='Markdown')
+    
+    # Get chatbot response
+    response_text = run_conversation(user_message, chat_history)
+    
+    # Update the typing message with actual response
+    if sent_message and sent_message.message_id:
+        try:
+            await context.bot.edit_message_text(
+                chat_id=update.message.chat_id,
+                message_id=sent_message.message_id,
+                text=response_text
+            )
+        except Exception:
+            await update.message.reply_text(response_text)
+    else:
+        await update.message.reply_text(response_text)
+    
+    # Update chat history
+    chat_history.append({"role": "user", "content": user_message})
+    chat_history.append({"role": "assistant", "content": response_text})
+    
+    # Truncate history if too long
+    if len(chat_history) > MAX_HISTORY * 2:
+        chat_history = chat_history[-(MAX_HISTORY * 2):]
+    
+    chat_histories[user_id] = chat_history
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle errors caused by Updates."""
@@ -497,6 +627,8 @@ async def main() -> None:
     application.add_handler(CommandHandler("set_limit", set_limit_command))
     application.add_handler(CommandHandler("check_limit", check_limit_command))
     application.add_handler(CommandHandler("clear", clear_command))
+    application.add_handler(CommandHandler("chat", chat_command))
+    application.add_handler(CommandHandler("chatmode", chatmode_command))
     
     # Handle photo messages (invoice images)
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))

@@ -291,6 +291,9 @@ def process_invoice_with_llm(image_path):
         return None
 
     client = Groq(api_key=groq_api_key)
+    
+    # Get OCR model from environment
+    ocr_model = os.environ.get("OCR_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
 
     try:
         # Encode image
@@ -336,7 +339,7 @@ CRITICAL FORMATTING RULES:
 Return ONLY the JSON, no explanations."""
 
         response = client.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            model=ocr_model,
             messages=[
                 {
                     "role": "user",

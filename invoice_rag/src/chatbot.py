@@ -24,6 +24,9 @@ if not groq_api_key:
 
 client = Groq(api_key=groq_api_key)
 
+# Model configuration
+CHAT_MODEL = os.environ.get("CHAT_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
+
 # --- System Prompt in English ---
 SYSTEM_PROMPT = """
 You are a "Financial Assistant", a friendly and helpful AI chatbot. Your goal is to help users understand their spending by analyzing their invoice data.
@@ -252,7 +255,8 @@ AVAILABLE_FUNCTIONS = {
 
 def run_conversation(user_message: str, chat_history: List[Dict[str, Any]] | None = None) -> str:
     """
-    Runs a conversation with the LLM, including function calling.
+    Runs a conversation with the LLM, including multi-turn function calling.
+    Supports calling multiple tools sequentially for complex queries.
     """
     if chat_history is None:
         chat_history = []
@@ -261,21 +265,27 @@ def run_conversation(user_message: str, chat_history: List[Dict[str, Any]] | Non
     messages.extend(chat_history)
     messages.append({"role": "user", "content": user_message})
 
+    MAX_ITERATIONS = 5  # Prevent infinite loops
+
     try:
-        # First API call to get the tool choice
-        response = client.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
-            messages=cast(Iterable[ChatCompletionMessageParam], messages),
-            tools=cast(Iterable[ChatCompletionToolParam], tools),
-            tool_choice="auto",
-        )
+        for iteration in range(MAX_ITERATIONS):
+            # API call to get response (may include tool calls)
+            response = client.chat.completions.create(
+                model=CHAT_MODEL,
+                messages=cast(Iterable[ChatCompletionMessageParam], messages),
+                tools=cast(Iterable[ChatCompletionToolParam], tools),
+                tool_choice="auto",
+            )
 
-        response_message = response.choices[0].message
-        tool_calls = response_message.tool_calls
+            response_message = response.choices[0].message
+            tool_calls = response_message.tool_calls
 
-        # If the model wants to call a function
-        if tool_calls:
-            messages.append(response_message.model_dump(exclude_unset=True))  # Extend conversation with assistant's reply
+            # If no tool calls, we have the final response
+            if not tool_calls:
+                return response_message.content or ""
+
+            # Model wants to call functions
+            messages.append(response_message.model_dump(exclude_unset=True))
 
             # Execute all tool calls
             for tool_call in tool_calls:
@@ -308,16 +318,10 @@ def run_conversation(user_message: str, chat_history: List[Dict[str, Any]] | Non
                         }
                     )
 
-            # Second API call to get the final response
-            final_response = client.chat.completions.create(
-                model="meta-llama/llama-4-scout-17b-16e-instruct",
-                messages=cast(Iterable[ChatCompletionMessageParam], messages),
-            )
+            # Continue loop to let model process tool results
 
-            return final_response.choices[0].message.content or ""
-        else:
-            # If no tool is called, return the direct response
-            return response_message.content or ""
+        # If we hit max iterations, return a message
+        return "I apologize, but I need to break down your request into smaller parts. Could you ask about one thing at a time?"
 
     except Exception as e:
         print(f"An error occurred: {e}")
