@@ -57,10 +57,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     keyboard = [
-        ['/upload_invoice', '/analysis'],
-        ['/recent_invoices'],
         ['/set_limit', '/check_limit'],
-        ['/help']
+        ['/upload_invoice', '/analysis', '/recent_invoices'],
+        ['/chatmode', '/clear', '/help']
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     
@@ -195,9 +194,9 @@ async def analysis_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         
         await update.message.reply_text(summary)
 
-        # Then, generate and send the visualization
+        # Then, generate and send the visualization with user_id
         await update.message.reply_text("📊 Generating your comprehensive analysis dashboard...")
-        buf = get_visualization()
+        buf = get_visualization(user_id=update.effective_user.id)
         await update.message.reply_photo(buf)
         
     except Exception as e:
@@ -391,7 +390,7 @@ async def visualizations_command(update: Update, context: ContextTypes.DEFAULT_T
         
     try:
         await update.message.reply_text("📊 Generating your comprehensive analysis dashboard...")
-        buf = get_visualization()
+        buf = get_visualization(user_id=update.effective_user.id)
         await update.message.reply_photo(buf)
     except Exception as e:
         await update.message.reply_text(f"❌ Error generating visualization: {str(e)}")

@@ -1,0 +1,19 @@
+Timestamp,Email Address,1. Which of the following best describes your current role? ,2. How easy or difficult was it to use the bot for the first time?,3. What was your favorite thing about using the bot? ,4. What was the most frustrating or confusing part of using the bot? ,"5. Based on your testing, what are the top 3 things you think we should improve?
+Example:
+1. ______
+2. ______
+3. ______",6. Is there a specific feature you wish the bot or the project had?,Name
+14/10/2025 23:03:13,nurrizkyaj.home@gmail.com,Student,5. Very Easy,/set_limit,/analysis,"1. /analysis
+2. /check_limit
+3. /set_limit",Output dalam bentuk Spreadsheets ,Nurrizky Arum Jatmiko
+14/10/2025 23:14:12,helmyl.work@gmail.com,Software Developer,5. Very Easy,"fast processing, easy to use",the dashboard seems not working,"1. The wording of features, make it more self descriptive
+2. Make the dashboard working
+3. Currency format",The CRUD/Overwrite the existing invoice or reupdate the existing invoice,Helmy Luqmanulhakim
+14/10/2025 23:33:12,bukanmanusiabiasa@gmail.com,Data Scientist,4. Easy,"liked how simple and conversational it was. Uploading an invoice and getting structured data back felt natural, like chatting with a smart assistant. The ability to ask follow-up questions (“What’s the total amount?” “Summarize this invoice”) made it feel more interactive and AI-driven rather than a static form.","Sometimes the data extraction wasn’t 100% accurate, especially when the invoice layout was non-standard. Also, there wasn’t always clear feedback if the bot didn’t understand a question — it would just respond vaguely. A “confidence score” or clearer error message would help a lot.","1. Improve OCR accuracy and handle more diverse invoice templates (scanned, multi-language, rotated text, etc.).
+
+2. Add clearer user feedback or “why” explanations when the bot can’t extract or answer something.
+
+3. Allow structured export (CSV/Excel/JSON) so users can save the parsed invoice data easily.","I’d love a dashboard or summary view showing all uploaded invoices with totals, due dates, and payment statuses kind of like a mini finance tracker. Also, an integration with Google Sheets or Notion would be powerful for automation.",Handy Ruyono
+15/10/2025 2:05:39,2110631170140@student.unsika.ac.id,Software Developer,4. Easy,"hal favorit saya ketika mencoba bot ini, adalah fitur untuk track pengluaran bulanan berdasarkan invoice","saat menggunakan fitur /set_limit, karena salah menampilkan contoh untuk penggunaannya","1. Tambahkan bot ini pada aplikasi whatsapp
+2. Pada fitur analysis tampilan ui lebih di percantik
+3. Tambahkan fitur untuk split bill berdasarkan invoice",fitur untuk split bill berdasarkan invoice,Reymen Maulana

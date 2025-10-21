@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 import numpy as np
 from datetime import datetime
+from typing import Optional
 from src.analysis import (
     analyze_invoices,
     calculate_weekly_averages,
@@ -15,10 +16,32 @@ from src.analysis import (
     analyze_transaction_types,
     parse_invoice_date
 )
+from telegram_bot.spending_limits import check_spending_limit
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
+
+def format_rp(value, pos=None) -> str:
+    """
+    Format Rupiah values with K/M suffixes for better readability.
+    
+    Args:
+        value: Numeric value to format
+        pos: Position parameter (required by FuncFormatter, can be None)
+    
+    Returns:
+        Formatted string with Rp prefix and K/M suffix
+    """
+    if value is None or value == 0:
+        return 'Rp 0'
+    
+    if value >= 1_000_000:
+        return f'Rp {value/1_000_000:.1f}M'
+    elif value >= 1_000:
+        return f'Rp {value/1_000:.0f}K'
+    else:
+        return f'Rp {value:,.0f}'
 
 def get_spending_pattern_plot(weeks_back: int = 8) -> BytesIO:
     """Generate spending pattern visualization."""
@@ -212,8 +235,29 @@ def create_summary_visualization(weeks_back: int | None = None) -> BytesIO:
     buf.seek(0)
     return buf
 
-def create_comprehensive_dashboard(weeks_back: int = 8) -> BytesIO:
+def create_comprehensive_dashboard(weeks_back: int = 8, user_id: Optional[int] = None) -> BytesIO:
     """Create a comprehensive dashboard with all invoice data in one intuitive image."""
+    # Define color constants for consistent theming
+    COLOR_BG = '#EAF2F8'
+    COLOR_TITLE = '#17202A'
+    COLOR_SUBTITLE = '#2C3E50'
+    COLOR_SPEND = '#E74C3C'
+    COLOR_INVOICES = '#3498DB'
+    COLOR_AVG = '#2ECC71'
+    COLOR_BUDGET_OK = '#2ECC71'
+    COLOR_BUDGET_WARN = '#F39C12'
+    COLOR_BUDGET_OVER = '#E74C3C'
+    COLOR_BUDGET_NONE = '#95A5A6'
+    COLOR_TREND = '#8E44AD'
+    COLOR_TREND_UP = '#E74C3C'
+    COLOR_TREND_DOWN = '#2ECC71'
+    COLOR_TREND_STABLE = '#F1C40F'
+    
+    # Fetch budget status if user_id is provided
+    budget_status = None
+    if user_id is not None:
+        budget_status = check_spending_limit(user_id)
+    
     # Get all necessary data
     analysis = analyze_invoices(weeks_back=weeks_back)
     weekly_data = calculate_weekly_averages(weeks_back=weeks_back)
@@ -243,24 +287,25 @@ def create_comprehensive_dashboard(weeks_back: int = 8) -> BytesIO:
         fm.fontManager.addfont(font_path)
         plt.rcParams['font.family'] = 'Segoe UI Emoji'
     
-    fig = plt.figure(figsize=(16, 10), facecolor='#EAF2F8')
+    fig = plt.figure(figsize=(16, 10), facecolor=COLOR_BG)
     
     # Create main title
     title_period = f'(Last {weeks_back} Weeks)' if weeks_back else '(All Time)'
-    fig.suptitle(f'📊 Analysis Summary {title_period}', fontsize=22, fontweight='bold', y=0.98, color='#17202A')
+    fig.suptitle(f'📊 Analysis Summary {title_period}', fontsize=22, fontweight='bold', y=0.98, color=COLOR_TITLE)
     
-    # Create grid for better layout control
-    gs = fig.add_gridspec(3, 3, height_ratios=[0.8, 1.2, 1], width_ratios=[1.5, 1.5, 1],
-                         hspace=0.4, wspace=0.3, left=0.06, right=0.94, top=0.92, bottom=0.08)
+    # Create grid for better layout control - 4 columns for 4 KPI cards
+    gs = fig.add_gridspec(3, 4, height_ratios=[0.8, 1.2, 1], width_ratios=[1, 1, 1, 1],
+                         hspace=0.4, wspace=0.25, left=0.05, right=0.95, top=0.92, bottom=0.08)
     
     # ============== 1. KEY METRICS CARDS (Top row) ==============
-    # Create 3 metric cards
+    # Create 4 metric cards (including budget)
     metrics_data = [
-        ('Total Spent', f'Rp {analysis["total_spent"]/1000000:.1f}M', '#E74C3C'),
-        ('Invoices', f'{analysis["total_invoices"]}', '#3498DB'),
-        ('Avg Amount', f'Rp {analysis["average_amount"]/1000:.0f}K', '#2ECC71')
+        ('Total Spent', format_rp(analysis["total_spent"]), COLOR_SPEND),
+        ('Invoices', f'{analysis["total_invoices"]}', COLOR_INVOICES),
+        ('Avg Amount', format_rp(analysis["average_amount"]), COLOR_AVG)
     ]
     
+    # Create first 3 KPI cards
     for i, (title, value, color) in enumerate(metrics_data):
         ax = fig.add_subplot(gs[0, i])
         ax.axis('off')
@@ -272,12 +317,42 @@ def create_comprehensive_dashboard(weeks_back: int = 8) -> BytesIO:
         
         # Add text
         ax.text(0.5, 0.65, title, transform=ax.transAxes, ha='center', fontsize=12,
-               fontweight='bold', color='#2C3E50')
+               fontweight='bold', color=COLOR_SUBTITLE)
         ax.text(0.5, 0.35, value, transform=ax.transAxes, ha='center', fontsize=18,
                fontweight='bold', color=color)
     
+    # ============== Budget Status Card (4th KPI) ==============
+    ax_budget = fig.add_subplot(gs[0, 3])
+    ax_budget.axis('off')
+    
+    if budget_status and budget_status['has_limit']:
+        percentage = budget_status['percentage_used']
+        
+        # Determine color based on usage percentage
+        if percentage >= 100:
+            budget_color = COLOR_BUDGET_OVER
+        elif percentage >= 80:
+            budget_color = COLOR_BUDGET_WARN
+        else:
+            budget_color = COLOR_BUDGET_OK
+        
+        budget_value = f"{percentage:.0f}% Used"
+    else:
+        budget_color = COLOR_BUDGET_NONE
+        budget_value = "Not Set"
+    
+    # Create budget card
+    rect_budget = Rectangle((0.1, 0.2), 0.8, 0.6, transform=ax_budget.transAxes,
+                             facecolor=budget_color, alpha=0.1, edgecolor=budget_color, linewidth=2)
+    ax_budget.add_patch(rect_budget)
+    
+    ax_budget.text(0.5, 0.65, 'Budget Status', transform=ax_budget.transAxes, ha='center',
+                   fontsize=12, fontweight='bold', color=COLOR_SUBTITLE)
+    ax_budget.text(0.5, 0.35, budget_value, transform=ax_budget.transAxes, ha='center',
+                   fontsize=18, fontweight='bold', color=budget_color)
+    
     # ============== 2. WEEKLY SPENDING TREND (Middle left) ==============
-    ax_trend = fig.add_subplot(gs[1, :2])
+    ax_trend = fig.add_subplot(gs[1, :3])
     weekly_totals = weekly_data['weekly_breakdown']
     
     if weekly_totals:
@@ -286,61 +361,86 @@ def create_comprehensive_dashboard(weeks_back: int = 8) -> BytesIO:
         amounts = [item[1]['total'] for item in sorted_weeks]
         ranges = [item[1]['range'] for item in sorted_weeks]
         
-        # Create LINE chart with markers (as requested)
-        ax_trend.plot(range(len(dates)), amounts, marker='o', linewidth=2.5,
-                     markersize=8, color='#8E44AD', markerfacecolor='#9B59B6',
-                     markeredgewidth=2, markeredgecolor='white')
-        
-        # Add grid for better readability
-        ax_trend.grid(True, alpha=0.3, linestyle='--')
-        
-        # Fill area under the line
-        ax_trend.fill_between(range(len(dates)), amounts, alpha=0.1, color='#8E44AD')
-        
-        ax_trend.set_title('Weekly Spending Trend', fontsize=14, fontweight='bold', pad=15, color='#2C3E50')
-        ax_trend.set_xlabel('Week', fontsize=11, color='#2C3E50')
-        ax_trend.set_ylabel('Amount (Rp)', fontsize=11, color='#2C3E50')
-        ax_trend.set_xticks(range(len(dates)))
-        ax_trend.set_xticklabels([f'W{i+1}\n({ranges[i]})' for i in range(len(dates))], fontsize=8)
-        
-        # Format y-axis
-        ax_trend.yaxis.set_major_formatter(
-            FuncFormatter(lambda x, p: f'{int(x/1000000)}M' if x >= 1000000 else f'{int(x/1000)}K')
-        )
-        
-        # Add trend badge
-        trend_color = '#E74C3C' if trends['trend'] == 'increasing' else '#2ECC71' if trends['trend'] == 'decreasing' else '#F1C40F'
-        trend_text = f"📊 {trends['trend'].upper()}\n{trends['trend_percentage']:+.1f}%"
-        ax_trend.text(0.02, 0.98, trend_text, transform=ax_trend.transAxes,
-                     fontsize=10, bbox=dict(boxstyle='round,pad=0.5',
-                     facecolor=trend_color, alpha=0.9, edgecolor='white', linewidth=2),
-                     verticalalignment='top', color='white', fontweight='bold')
+        # Check if we have sufficient data for trend analysis
+        if len(dates) < 3:
+            # Insufficient data - show message
+            ax_trend.text(0.5, 0.5, '📊 More data needed for trend analysis\n\n' +
+                         'Upload more invoices to see spending trends over time',
+                         transform=ax_trend.transAxes, ha='center', va='center',
+                         fontsize=14, color=COLOR_SUBTITLE, style='italic',
+                         bbox=dict(boxstyle='round,pad=1', facecolor='white', alpha=0.8))
+            ax_trend.set_title('Weekly Spending Trend', fontsize=14, fontweight='bold', pad=15, color=COLOR_SUBTITLE)
+            ax_trend.set_xticks([])
+            ax_trend.set_yticks([])
+            ax_trend.spines['top'].set_visible(False)
+            ax_trend.spines['right'].set_visible(False)
+            ax_trend.spines['bottom'].set_visible(False)
+            ax_trend.spines['left'].set_visible(False)
+        else:
+            # Sufficient data - show trend
+            # Create LINE chart with markers
+            ax_trend.plot(range(len(dates)), amounts, marker='o', linewidth=2.5,
+                         markersize=8, color=COLOR_TREND, markerfacecolor='#9B59B6',
+                         markeredgewidth=2, markeredgecolor='white')
+            
+            # Add grid for better readability
+            ax_trend.grid(True, alpha=0.3, linestyle='--')
+            
+            # Fill area under the line
+            ax_trend.fill_between(range(len(dates)), amounts, alpha=0.1, color=COLOR_TREND)
+            
+            ax_trend.set_title('Weekly Spending Trend', fontsize=14, fontweight='bold', pad=15, color=COLOR_SUBTITLE)
+            ax_trend.set_xlabel('Week', fontsize=11, color=COLOR_SUBTITLE)
+            ax_trend.set_ylabel('Amount (Rp)', fontsize=11, color=COLOR_SUBTITLE)
+            ax_trend.set_xticks(range(len(dates)))
+            ax_trend.set_xticklabels([f'W{i+1}\n({ranges[i]})' for i in range(len(dates))], fontsize=8)
+            
+            # Format y-axis using format_rp
+            ax_trend.yaxis.set_major_formatter(FuncFormatter(format_rp))
+            
+            # Add trend badge only if we have valid trend data
+            if trends['trend'] != 'insufficient_data':
+                if trends['trend'] == 'increasing':
+                    trend_color = COLOR_TREND_UP
+                elif trends['trend'] == 'decreasing':
+                    trend_color = COLOR_TREND_DOWN
+                else:
+                    trend_color = COLOR_TREND_STABLE
+                
+                trend_text = f"📊 {trends['trend'].upper()}\n{trends['trend_percentage']:+.1f}%"
+                ax_trend.text(0.02, 0.98, trend_text, transform=ax_trend.transAxes,
+                             fontsize=10, bbox=dict(boxstyle='round,pad=0.5',
+                             facecolor=trend_color, alpha=0.9, edgecolor='white', linewidth=2),
+                             verticalalignment='top', color='white', fontweight='bold')
     
     # ============== 3. TOP VENDORS (Middle right) ==============
-    ax_vendors = fig.add_subplot(gs[1, 2])
+    ax_vendors = fig.add_subplot(gs[1, 3])
     vendors = analysis['top_vendors'][:5]  # Top 5 vendors
     
     if vendors:
         vendor_names = [v['name'][:12] + '..' if len(v['name']) > 12 else v['name'] for v in vendors]
-        vendor_totals = [v['total']/1000000 for v in vendors]  # Convert to millions
+        vendor_totals = [v['total'] for v in vendors]  # Keep actual values
         
         # Create horizontal bar chart with gradient colors
         colors = plt.cm.get_cmap('cool')(np.linspace(0.3, 0.8, len(vendor_names)))
         bars = ax_vendors.barh(vendor_names, vendor_totals, color=colors, height=0.6)
         
-        # Add value labels
+        # Add value labels using format_rp
         for bar, vendor in zip(bars, vendors):
             width = bar.get_width()
-            ax_vendors.text(width + 0.05, bar.get_y() + bar.get_height()/2,
-                          f'{width:.1f}M', ha='left', va='center', fontsize=8,
+            ax_vendors.text(width * 1.02, bar.get_y() + bar.get_height()/2,
+                          format_rp(vendor['total']), ha='left', va='center', fontsize=8,
                           fontweight='bold')
         
-        ax_vendors.set_title('Top Vendors', fontsize=14, fontweight='bold', pad=15, color='#2C3E50')
-        ax_vendors.set_xlabel('Spending (Million Rp)', fontsize=11, color='#2C3E50')
+        ax_vendors.set_title('Top Vendors', fontsize=14, fontweight='bold', pad=15, color=COLOR_SUBTITLE)
+        ax_vendors.set_xlabel('Total Spending', fontsize=11, color=COLOR_SUBTITLE)
         ax_vendors.grid(True, axis='x', alpha=0.3, linestyle='--')
+        
+        # Format x-axis using format_rp
+        ax_vendors.xaxis.set_major_formatter(FuncFormatter(format_rp))
     
     # ============== 4. CATEGORY DISTRIBUTION - DONUT CHART (Bottom left) ==============
-    ax_donut = fig.add_subplot(gs[2, 0])
+    ax_donut = fig.add_subplot(gs[2, :2])
     by_type = transaction_types['by_type']
     
     if by_type:
@@ -354,8 +454,8 @@ def create_comprehensive_dashboard(weeks_back: int = 8) -> BytesIO:
             types.append('Others')
             amounts.append(others_amount)
         
-        # Create donut chart
-        colors_pie = ['#3498DB', '#E74C3C', '#2ECC71', '#F1C40F', '#9B59B6'][:len(types)]
+        # Create donut chart with defined colors
+        colors_pie = [COLOR_INVOICES, COLOR_SPEND, COLOR_AVG, COLOR_TREND_STABLE, '#9B59B6'][:len(types)]
         pie_result = ax_donut.pie(amounts, labels=types, autopct='%1.0f%%',
                                   startangle=90, colors=colors_pie,
                                   pctdistance=0.85)
@@ -365,16 +465,16 @@ def create_comprehensive_dashboard(weeks_back: int = 8) -> BytesIO:
             wedges, texts, autotexts = pie_result
             # Style the text
             for text in texts:
-                text.set_color('#2C3E50')
+                text.set_color(COLOR_SUBTITLE)
             for autotext in autotexts:
                 autotext.set_color('white')
                 autotext.set_fontweight('bold')
                 autotext.set_fontsize(9)
         
-        ax_donut.set_title('Category Distribution', fontsize=14, fontweight='bold', pad=15, color='#17202A')
+        ax_donut.set_title('Category Distribution', fontsize=14, fontweight='bold', pad=15, color=COLOR_SUBTITLE)
     
     # ============== 5. RECENT TRANSACTIONS TABLE (Bottom right) ==============
-    ax_table = fig.add_subplot(gs[2, 1:])
+    ax_table = fig.add_subplot(gs[2, 2:])
     ax_table.axis('off')
     
     # Prepare table data
@@ -386,7 +486,8 @@ def create_comprehensive_dashboard(weeks_back: int = 8) -> BytesIO:
             date_to_use = parse_invoice_date(inv['invoice_date'])
             date_str = date_to_use.strftime('%d/%m') if date_to_use else 'N/A'
             vendor = (inv['shop_name'][:15] + '..') if inv['shop_name'] and len(inv['shop_name']) > 15 else (inv['shop_name'] or 'Unknown')
-            amount = f'Rp {inv["total_amount"]/1000:.0f}K'
+            # Use format_rp for amount
+            amount = format_rp(inv["total_amount"])
             table_data.append([date_str, vendor, amount])
     else:
         table_data = [['No data', 'No data', 'No data']]
@@ -403,7 +504,7 @@ def create_comprehensive_dashboard(weeks_back: int = 8) -> BytesIO:
     
     # Style header row
     for i in range(len(headers)):
-        table[(0, i)].set_facecolor('#8E44AD')
+        table[(0, i)].set_facecolor(COLOR_TREND)
         table[(0, i)].set_text_props(weight='bold', color='white')
         table[(0, i)].set_height(0.15)
     
@@ -414,22 +515,35 @@ def create_comprehensive_dashboard(weeks_back: int = 8) -> BytesIO:
                 table[(i, j)].set_facecolor('#F5F5F5')
             table[(i, j)].set_height(0.12)
     
-    ax_table.set_title('Recent Transactions', fontsize=14, fontweight='bold', pad=15, color='#2C3E50')
+    ax_table.set_title('Recent Transactions', fontsize=14, fontweight='bold', pad=15, color=COLOR_SUBTITLE)
     
     # ============== 6. INSIGHTS FOOTER ==============
-    insights_text = "💡 Key Insights: "
-    if trends['trend'] == 'increasing':
-        insights_text += f"Spending ↑ {trends['trend_percentage']:.0f}% "
+    insights_text = "💡 Insights: "
+    
+    # Add trend information
+    if trends['trend'] == 'insufficient_data':
+        insights_text += "Not enough data for trend analysis"
+    elif trends['trend'] == 'increasing':
+        insights_text += f"Spending ↑ {trends['trend_percentage']:.0f}%"
     elif trends['trend'] == 'decreasing':
-        insights_text += f"Spending ↓ {abs(trends['trend_percentage']):.0f}% "
+        insights_text += f"Spending ↓ {abs(trends['trend_percentage']):.0f}%"
     else:
-        insights_text += "Spending stable "
+        insights_text += "Spending stable"
     
-    insights_text += f"| Weekly avg: Rp {weekly_data['weekly_average']/1000000:.1f}M "
-    insights_text += f"| Daily avg: Rp {weekly_data['daily_average']/1000:.0f}K"
+    # Add averages using format_rp
+    insights_text += f" | Weekly avg: {format_rp(weekly_data['weekly_average'])}"
+    insights_text += f" | Daily avg: {format_rp(weekly_data['daily_average'])}"
     
+    # Add budget status
+    if budget_status and budget_status['has_limit']:
+        percentage = budget_status['percentage_used']
+        insights_text += f" | Budget: {percentage:.0f}% used"
+    else:
+        insights_text += " | No budget set"
+    
+    # Add top vendor
     if vendors:
-        insights_text += f" | Top vendor: {vendors[0]['name']}"
+        insights_text += f" | Top: {vendors[0]['name']}"
     
     fig.text(0.5, 0.02, insights_text, ha='center', fontsize=10,
             bbox=dict(boxstyle='round,pad=0.5', facecolor='#FFFACD', alpha=0.8, edgecolor='#FFD700', linewidth=1))
@@ -446,10 +560,10 @@ def create_comprehensive_dashboard(weeks_back: int = 8) -> BytesIO:
     return buf
 
 # Update the get_visualization function to use the new dashboard
-def get_visualization(keyword: str | None = None, weeks_back: int = 8) -> BytesIO:
+def get_visualization(keyword: Optional[str] = None, weeks_back: int = 8, user_id: Optional[int] = None) -> BytesIO:
     """Get the visualization based on keyword."""
     if keyword == "dashboard" or keyword is None:
-        return create_comprehensive_dashboard(weeks_back=weeks_back)
+        return create_comprehensive_dashboard(weeks_back=weeks_back, user_id=user_id)
     elif keyword == "summary":
         return create_summary_visualization(weeks_back=weeks_back)
     elif keyword == "spending":
@@ -462,7 +576,7 @@ def get_visualization(keyword: str | None = None, weeks_back: int = 8) -> BytesI
         return get_daily_pattern_plot(weeks_back=weeks_back)
     else:
         # Default to comprehensive dashboard
-        return create_comprehensive_dashboard(weeks_back=weeks_back)
+        return create_comprehensive_dashboard(weeks_back=weeks_back, user_id=user_id)
 
 def get_available_visualizations() -> list:
     """Return list of available visualization keywords."""
