@@ -141,6 +141,53 @@ def get_weekly_data(weeks_back=4):
     finally:
         conn.close()
 
+def calculate_daily_totals(weeks_back=4):
+    """Calculate daily spending totals."""
+    invoices = get_weekly_data(weeks_back)
+    
+    if not invoices:
+        return {
+            'total_days': weeks_back * 7,
+            'daily_average': 0,
+            'total_spent': 0,
+            'transaction_count': 0,
+            'daily_breakdown': {}
+        }
+    
+    # Group by day
+    daily_totals = {}
+    
+    for invoice in invoices:
+        date_to_use = parse_invoice_date(invoice['invoice_date'])
+        if date_to_use:
+            day_key = date_to_use.strftime("%Y-%m-%d")
+            
+            if day_key not in daily_totals:
+                daily_totals[day_key] = {
+                    'total': 0,
+                    'count': 0,
+                    'date': date_to_use,
+                    'label': date_to_use.strftime('%d/%m')
+                }
+                
+            daily_totals[day_key]['total'] += invoice['total_amount']
+            daily_totals[day_key]['count'] += 1
+    
+    total_spent = sum(invoice['total_amount'] for invoice in invoices)
+    transaction_count = len(invoices)
+    
+    days_with_data = len(daily_totals)
+    daily_average = total_spent / max(days_with_data, 1) if days_with_data > 0 else 0
+    
+    return {
+        'total_days': weeks_back * 7,
+        'days_with_data': days_with_data,
+        'daily_average': daily_average,
+        'total_spent': total_spent,
+        'transaction_count': transaction_count,
+        'daily_breakdown': daily_totals
+    }
+
 def calculate_weekly_averages(weeks_back=4):
     """Calculate weekly spending averages."""
     invoices = get_weekly_data(weeks_back)
@@ -196,6 +243,107 @@ def calculate_weekly_averages(weeks_back=4):
         'weekly_transaction_counts': weekly_counts
     }
 
+def determine_time_granularity(weeks_back=4):
+    """
+    Determine the appropriate time granularity (daily or weekly) based on available data.
+    
+    Returns:
+        dict with keys: 'granularity' ('daily' or 'weekly'), 'reason', 'data_range_days'
+    """
+    invoices = get_weekly_data(weeks_back)
+    
+    if not invoices:
+        return {
+            'granularity': 'daily',
+            'reason': 'no_data',
+            'data_range_days': 0,
+            'sufficient_for_trend': False
+        }
+    
+    # Find date range
+    dates = []
+    for invoice in invoices:
+        date_to_use = parse_invoice_date(invoice['invoice_date'])
+        if date_to_use:
+            dates.append(date_to_use)
+    
+    if not dates:
+        return {
+            'granularity': 'daily',
+            'reason': 'no_valid_dates',
+            'data_range_days': 0,
+            'sufficient_for_trend': False
+        }
+    
+    date_range_days = (max(dates) - min(dates)).days + 1
+    unique_weeks = len(set(d.strftime("%Y-%W") for d in dates))
+    unique_days = len(set(d.strftime("%Y-%m-%d") for d in dates))
+    
+    # Decision logic
+    if date_range_days < 14 or unique_weeks < 2:
+        # Use daily granularity for short ranges
+        return {
+            'granularity': 'daily',
+            'reason': 'short_range',
+            'data_range_days': date_range_days,
+            'unique_days': unique_days,
+            'sufficient_for_trend': unique_days >= 3
+        }
+    else:
+        # Use weekly granularity for longer ranges
+        return {
+            'granularity': 'weekly',
+            'reason': 'sufficient_range',
+            'data_range_days': date_range_days,
+            'unique_weeks': unique_weeks,
+            'sufficient_for_trend': unique_weeks >= 2
+        }
+
+def analyze_daily_trends(weeks_back=4):
+    """Analyze spending trends on a daily basis."""
+    daily_data = calculate_daily_totals(weeks_back)
+    daily_breakdown = daily_data['daily_breakdown']
+    
+    if len(daily_breakdown) < 2:
+        return {
+            'trend': 'insufficient_data',
+            'trend_percentage': 0,
+            'granularity': 'daily',
+            'message': 'Need at least 2 days of data for trend analysis'
+        }
+    
+    # Sort days chronologically
+    sorted_days = sorted(daily_breakdown.items())
+    
+    # Calculate trend using last 2 data points
+    if len(sorted_days) >= 2:
+        recent_days = sorted_days[-2:]  # Last 2 days
+        old_avg = recent_days[0][1]['total']
+        new_avg = recent_days[1][1]['total']
+        
+        if old_avg > 0:
+            trend_percentage = ((new_avg - old_avg) / old_avg) * 100
+        else:
+            trend_percentage = 0
+        
+        if trend_percentage > 10:
+            trend = 'increasing'
+        elif trend_percentage < -10:
+            trend = 'decreasing'
+        else:
+            trend = 'stable'
+    else:
+        trend = 'stable'
+        trend_percentage = 0
+    
+    return {
+        'trend': trend,
+        'trend_percentage': trend_percentage,
+        'granularity': 'daily',
+        'daily_data': sorted_days,
+        'message': f'Spending is {trend} ({trend_percentage:+.1f}% change)'
+    }
+
 def analyze_spending_trends(weeks_back=4):
     """Analyze spending trends over time."""
     weekly_data = calculate_weekly_averages(weeks_back)
@@ -205,6 +353,7 @@ def analyze_spending_trends(weeks_back=4):
         return {
             'trend': 'insufficient_data',
             'trend_percentage': 0,
+            'granularity': 'weekly',
             'message': 'Need at least 2 weeks of data for trend analysis'
         }
     
@@ -235,6 +384,7 @@ def analyze_spending_trends(weeks_back=4):
     return {
         'trend': trend,
         'trend_percentage': trend_percentage,
+        'granularity': 'weekly',
         'weekly_data': sorted_weeks,
         'message': f'Spending is {trend} ({trend_percentage:+.1f}% change)'
     }

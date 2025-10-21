@@ -12,9 +12,12 @@ from typing import Optional
 from src.analysis import (
     analyze_invoices,
     calculate_weekly_averages,
+    calculate_daily_totals,
     analyze_spending_trends,
+    analyze_daily_trends,
     analyze_transaction_types,
-    parse_invoice_date
+    parse_invoice_date,
+    determine_time_granularity
 )
 from telegram_bot.spending_limits import check_spending_limit
 
@@ -260,8 +263,18 @@ def create_comprehensive_dashboard(weeks_back: int = 8, user_id: Optional[int] =
     
     # Get all necessary data
     analysis = analyze_invoices(weeks_back=weeks_back)
-    weekly_data = calculate_weekly_averages(weeks_back=weeks_back)
-    trends = analyze_spending_trends(weeks_back=weeks_back)
+    
+    # Determine time granularity adaptively
+    granularity_info = determine_time_granularity(weeks_back=weeks_back)
+    
+    # Get data based on granularity
+    if granularity_info['granularity'] == 'daily':
+        time_data = calculate_daily_totals(weeks_back=weeks_back)
+        trends = analyze_daily_trends(weeks_back=weeks_back)
+    else:
+        time_data = calculate_weekly_averages(weeks_back=weeks_back)
+        trends = analyze_spending_trends(weeks_back=weeks_back)
+    
     transaction_types = analyze_transaction_types(weeks_back=weeks_back)
     
     # Get recent invoices for the transactions table
@@ -353,31 +366,74 @@ def create_comprehensive_dashboard(weeks_back: int = 8, user_id: Optional[int] =
     
     # ============== 2. WEEKLY SPENDING TREND (Middle left) ==============
     ax_trend = fig.add_subplot(gs[1, :3])
-    weekly_totals = weekly_data['weekly_breakdown']
     
-    if weekly_totals:
-        sorted_weeks = sorted(weekly_totals.items())[-weeks_back:]
-        dates = [item[0] for item in sorted_weeks]
-        amounts = [item[1]['total'] for item in sorted_weeks]
-        ranges = [item[1]['range'] for item in sorted_weeks]
+    # Adaptive rendering based on granularity
+    if granularity_info['granularity'] == 'daily':
+        # Daily granularity
+        daily_breakdown = time_data['daily_breakdown']
         
-        # Check if we have sufficient data for trend analysis
-        if len(dates) < 3:
-            # Insufficient data - show message
+        if daily_breakdown and granularity_info['sufficient_for_trend']:
+            sorted_days = sorted(daily_breakdown.items())
+            dates = [item[0] for item in sorted_days]
+            amounts = [item[1]['total'] for item in sorted_days]
+            labels = [item[1]['label'] for item in sorted_days]
+            
+            # Create LINE chart with markers
+            ax_trend.plot(range(len(dates)), amounts, marker='o', linewidth=2.5,
+                         markersize=8, color=COLOR_TREND, markerfacecolor='#9B59B6',
+                         markeredgewidth=2, markeredgecolor='white')
+            
+            # Add grid for better readability
+            ax_trend.grid(True, alpha=0.3, linestyle='--')
+            
+            # Fill area under the line
+            ax_trend.fill_between(range(len(dates)), amounts, alpha=0.1, color=COLOR_TREND)
+            
+            ax_trend.set_title('Daily Spending Trend', fontsize=14, fontweight='bold', pad=15, color=COLOR_SUBTITLE)
+            ax_trend.set_xlabel('Date', fontsize=11, color=COLOR_SUBTITLE)
+            ax_trend.set_ylabel('Amount (Rp)', fontsize=11, color=COLOR_SUBTITLE)
+            ax_trend.set_xticks(range(len(dates)))
+            ax_trend.set_xticklabels(labels, fontsize=8, rotation=45)
+            
+            # Format y-axis using format_rp
+            ax_trend.yaxis.set_major_formatter(FuncFormatter(format_rp))
+            
+            # Add trend badge if we have valid trend data
+            if trends['trend'] != 'insufficient_data':
+                if trends['trend'] == 'increasing':
+                    trend_color = COLOR_TREND_UP
+                elif trends['trend'] == 'decreasing':
+                    trend_color = COLOR_TREND_DOWN
+                else:
+                    trend_color = COLOR_TREND_STABLE
+                
+                trend_text = f"📊 {trends['trend'].upper()}\n{trends['trend_percentage']:+.1f}%"
+                ax_trend.text(0.02, 0.98, trend_text, transform=ax_trend.transAxes,
+                             fontsize=10, bbox=dict(boxstyle='round,pad=0.5',
+                             facecolor=trend_color, alpha=0.9, edgecolor='white', linewidth=2),
+                             verticalalignment='top', color='white', fontweight='bold')
+        else:
+            # Insufficient data for daily trend
             ax_trend.text(0.5, 0.5, '📊 More data needed for trend analysis\n\n' +
                          'Upload more invoices to see spending trends over time',
                          transform=ax_trend.transAxes, ha='center', va='center',
                          fontsize=14, color=COLOR_SUBTITLE, style='italic',
                          bbox=dict(boxstyle='round,pad=1', facecolor='white', alpha=0.8))
-            ax_trend.set_title('Weekly Spending Trend', fontsize=14, fontweight='bold', pad=15, color=COLOR_SUBTITLE)
+            ax_trend.set_title('Daily Spending Trend', fontsize=14, fontweight='bold', pad=15, color=COLOR_SUBTITLE)
             ax_trend.set_xticks([])
             ax_trend.set_yticks([])
-            ax_trend.spines['top'].set_visible(False)
-            ax_trend.spines['right'].set_visible(False)
-            ax_trend.spines['bottom'].set_visible(False)
-            ax_trend.spines['left'].set_visible(False)
-        else:
-            # Sufficient data - show trend
+            for spine in ax_trend.spines.values():
+                spine.set_visible(False)
+    else:
+        # Weekly granularity
+        weekly_breakdown = time_data['weekly_breakdown']
+        
+        if weekly_breakdown and granularity_info['sufficient_for_trend']:
+            sorted_weeks = sorted(weekly_breakdown.items())[-weeks_back:]
+            dates = [item[0] for item in sorted_weeks]
+            amounts = [item[1]['total'] for item in sorted_weeks]
+            ranges = [item[1]['range'] for item in sorted_weeks]
+            
             # Create LINE chart with markers
             ax_trend.plot(range(len(dates)), amounts, marker='o', linewidth=2.5,
                          markersize=8, color=COLOR_TREND, markerfacecolor='#9B59B6',
@@ -398,7 +454,7 @@ def create_comprehensive_dashboard(weeks_back: int = 8, user_id: Optional[int] =
             # Format y-axis using format_rp
             ax_trend.yaxis.set_major_formatter(FuncFormatter(format_rp))
             
-            # Add trend badge only if we have valid trend data
+            # Add trend badge if we have valid trend data
             if trends['trend'] != 'insufficient_data':
                 if trends['trend'] == 'increasing':
                     trend_color = COLOR_TREND_UP
@@ -412,6 +468,18 @@ def create_comprehensive_dashboard(weeks_back: int = 8, user_id: Optional[int] =
                              fontsize=10, bbox=dict(boxstyle='round,pad=0.5',
                              facecolor=trend_color, alpha=0.9, edgecolor='white', linewidth=2),
                              verticalalignment='top', color='white', fontweight='bold')
+        else:
+            # Insufficient data for weekly trend
+            ax_trend.text(0.5, 0.5, '📊 More data needed for trend analysis\n\n' +
+                         'Upload more invoices to see spending trends over time',
+                         transform=ax_trend.transAxes, ha='center', va='center',
+                         fontsize=14, color=COLOR_SUBTITLE, style='italic',
+                         bbox=dict(boxstyle='round,pad=1', facecolor='white', alpha=0.8))
+            ax_trend.set_title('Weekly Spending Trend', fontsize=14, fontweight='bold', pad=15, color=COLOR_SUBTITLE)
+            ax_trend.set_xticks([])
+            ax_trend.set_yticks([])
+            for spine in ax_trend.spines.values():
+                spine.set_visible(False)
     
     # ============== 3. TOP VENDORS (Middle right) ==============
     ax_vendors = fig.add_subplot(gs[1, 3])
@@ -530,9 +598,12 @@ def create_comprehensive_dashboard(weeks_back: int = 8, user_id: Optional[int] =
     else:
         insights_text += "Spending stable"
     
-    # Add averages using format_rp
-    insights_text += f" | Weekly avg: {format_rp(weekly_data['weekly_average'])}"
-    insights_text += f" | Daily avg: {format_rp(weekly_data['daily_average'])}"
+    # Add averages using format_rp - adapt based on granularity
+    if granularity_info['granularity'] == 'daily':
+        insights_text += f" | Daily avg: {format_rp(time_data['daily_average'])}"
+    else:
+        insights_text += f" | Weekly avg: {format_rp(time_data['weekly_average'])}"
+        insights_text += f" | Daily avg: {format_rp(time_data['daily_average'])}"
     
     # Add budget status
     if budget_status and budget_status['has_limit']:
