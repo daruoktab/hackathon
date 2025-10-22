@@ -78,3 +78,5 @@ Thumbs.db
 # Exclude specific files
 marimorules.md
 .kilocode/mcp.json
+
+echo "google_credentials.json" >> .gitignore

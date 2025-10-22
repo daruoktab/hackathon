@@ -1,10 +1,13 @@
-from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters, CallbackQueryHandler
 import os
 from dotenv import load_dotenv
 import sys
 import asyncio
 from pathlib import Path
+import pandas as pd
+from io import BytesIO
+from datetime import datetime
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent
@@ -13,7 +16,7 @@ sys.path.append(str(project_root))
 from src.processor import process_invoice  # noqa: E402
 from src.database import get_db_session, Invoice  # noqa: E402
 from src.chatbot import run_conversation  # noqa: E402
-from src.analysis import analyze_invoices  # noqa: E402
+from src.analysis import analyze_invoices, calculate_weekly_averages, analyze_spending_trends  # noqa: E402
 from telegram_bot.spending_limits import (  # noqa: E402
     init_spending_limits_table,
     set_monthly_limit,
@@ -198,6 +201,20 @@ async def analysis_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await update.message.reply_text("📊 Generating your comprehensive analysis dashboard...")
         buf = get_visualization(user_id=update.effective_user.id)
         await update.message.reply_photo(buf)
+        
+        # Ask if user wants to export to spreadsheet
+        keyboard = [
+            [
+                InlineKeyboardButton("📥 Export to Excel", callback_data="export_excel"),
+                InlineKeyboardButton("📊 Export to Google Sheets", callback_data="export_sheets")
+            ],
+            [InlineKeyboardButton("❌ No, thanks", callback_data="export_cancel")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(
+            "📋 Do you want to export this analysis to a spreadsheet?",
+            reply_markup=reply_markup
+        )
         
     except Exception as e:
         await update.message.reply_text(f"❌ Error getting summary or visualization: {str(e)}")
@@ -504,6 +521,227 @@ async def chat_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     chat_histories[user_id] = chat_history
 
+async def export_to_excel(user_id: int, weeks_back: int = 8) -> BytesIO:
+    """Generate Excel file with analysis data."""
+    analysis = analyze_invoices(weeks_back=weeks_back)
+    weekly_data = calculate_weekly_averages(weeks_back=weeks_back)
+    trends = analyze_spending_trends(weeks_back=weeks_back)
+    
+    # Get recent invoices
+    session = get_db_session()
+    invoices = session.query(Invoice).order_by(Invoice.processed_at.desc()).limit(50).all()
+    session.close()
+    
+    # Create Excel file in memory
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # Summary sheet
+        summary_df = pd.DataFrame([{
+            'Total Spent (Rp)': analysis['total_spent'],
+            'Total Invoices': analysis['total_invoices'],
+            'Average Amount (Rp)': analysis['average_amount'],
+            'Trend': trends['trend'],
+            'Trend Percentage': f"{trends['trend_percentage']:.2f}%",
+            'Weekly Average (Rp)': weekly_data['weekly_average'],
+            'Daily Average (Rp)': weekly_data['daily_average']
+        }])
+        summary_df.to_excel(writer, sheet_name='Summary', index=False)
+        
+        # Top Vendors sheet
+        vendors_data = []
+        for vendor in analysis['top_vendors']:
+            vendors_data.append({
+                'Vendor': vendor['name'],
+                'Total (Rp)': vendor['total'],
+                'Count': vendor['transaction_count'],
+                'Average (Rp)': vendor['total'] / vendor['transaction_count'] if vendor['transaction_count'] > 0 else 0
+            })
+        vendors_df = pd.DataFrame(vendors_data)
+        vendors_df.to_excel(writer, sheet_name='Top Vendors', index=False)
+        
+        # Weekly Breakdown sheet
+        weekly_breakdown = []
+        for week, data in weekly_data['weekly_breakdown'].items():
+            weekly_breakdown.append({
+                'Week': week,
+                'Date Range': data['range'],
+                'Total (Rp)': data['total'],
+                'Count': data['count'],
+                'Average (Rp)': data['average']
+            })
+        weekly_df = pd.DataFrame(weekly_breakdown)
+        weekly_df.to_excel(writer, sheet_name='Weekly Breakdown', index=False)
+        
+        # All Invoices sheet
+        if invoices:
+            invoices_data = []
+            for inv in invoices:
+                invoices_data.append({
+                    'Date': inv.invoice_date,
+                    'Vendor': inv.shop_name,
+                    'Amount (Rp)': inv.total_amount,
+                    'Transaction Type': inv.transaction_type,
+                    'Processed At': inv.processed_at
+                })
+            invoices_df = pd.DataFrame(invoices_data)
+            invoices_df.to_excel(writer, sheet_name='All Invoices', index=False)
+    
+    output.seek(0)
+    return output
+
+async def export_to_google_sheets(user_id: int, weeks_back: int = 8):
+    """
+    Export analysis to Google Sheets.
+    This function will guide users through the Google Sheets setup.
+    """
+    try:
+        import gspread
+        from oauth2client.service_account import ServiceAccountCredentials
+        
+        # Check if credentials file exists
+        credentials_path = Path(__file__).parent.parent / 'google_credentials.json'
+        if not credentials_path.exists():
+            return None, (
+                "⚠️ Google Sheets integration is not configured.\n\n"
+                "To set it up:\n"
+                "1. Go to Google Cloud Console\n"
+                "2. Enable Google Sheets API\n"
+                "3. Create a Service Account\n"
+                "4. Download credentials as 'google_credentials.json'\n"
+                "5. Place it in the invoice_rag folder\n\n"
+                "For now, you can use Excel export instead!"
+            )
+        
+        # Authorize with Google Sheets
+        scope = [
+            'https://spreadsheets.google.com/feeds',
+            'https://www.googleapis.com/auth/drive'
+        ]
+        creds = ServiceAccountCredentials.from_json_keyfile_name(str(credentials_path), scope)
+        client = gspread.authorize(creds)
+        
+        # Create a new spreadsheet
+        spreadsheet_name = f"UrFinance Analysis - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        spreadsheet = client.create(spreadsheet_name)
+        
+        # Get analysis data
+        analysis = analyze_invoices(weeks_back=weeks_back)
+        weekly_data = calculate_weekly_averages(weeks_back=weeks_back)
+        trends = analyze_spending_trends(weeks_back=weeks_back)
+        
+        # Summary worksheet
+        summary_sheet = spreadsheet.sheet1
+        summary_sheet.update_title('Summary')
+        summary_sheet.update('A1', [
+            ['Metric', 'Value'],
+            ['Total Spent (Rp)', analysis['total_spent']],
+            ['Total Invoices', analysis['total_invoices']],
+            ['Average Amount (Rp)', analysis['average_amount']],
+            ['Trend', trends['trend']],
+            ['Trend Percentage', f"{trends['trend_percentage']:.2f}%"],
+            ['Weekly Average (Rp)', weekly_data['weekly_average']],
+            ['Daily Average (Rp)', weekly_data['daily_average']]
+        ])
+        
+        # Top Vendors worksheet
+        vendors_sheet = spreadsheet.add_worksheet(title='Top Vendors', rows=100, cols=10)
+        vendors_headers = [['Vendor', 'Total (Rp)', 'Count', 'Average (Rp)']]
+        vendors_data = [[
+            v['name'], 
+            v['total'], 
+            v['transaction_count'], 
+            v['total'] / v['transaction_count'] if v['transaction_count'] > 0 else 0
+        ] for v in analysis['top_vendors']]
+        vendors_sheet.update('A1', vendors_headers + vendors_data)
+        
+        # Weekly Breakdown worksheet
+        weekly_sheet = spreadsheet.add_worksheet(title='Weekly Breakdown', rows=100, cols=10)
+        weekly_headers = [['Week', 'Date Range', 'Total (Rp)', 'Count', 'Average (Rp)']]
+        weekly_rows = []
+        for week, data in weekly_data['weekly_breakdown'].items():
+            weekly_rows.append([week, data['range'], data['total'], data['count'], data['average']])
+        weekly_sheet.update('A1', weekly_headers + weekly_rows)
+        
+        # Share with anyone who has the link (read-only access)
+        spreadsheet.share('', perm_type='anyone', role='reader')
+        
+        return spreadsheet.url, None
+        
+    except ImportError:
+        return None, (
+            "⚠️ Google Sheets libraries not installed.\n\n"
+            "To enable Google Sheets export, run:\n"
+            "`pip install gspread oauth2client`\n\n"
+            "For now, you can use Excel export instead!"
+        )
+    except Exception as e:
+        error_msg = str(e)
+        if "storage quota has been exceeded" in error_msg.lower():
+            return None, (
+                "❌ Google Drive storage is full!\n\n"
+                "Solutions:\n"
+                "1. Delete old files from Google Drive\n"
+                "2. Empty Google Drive Trash\n"
+                "3. Upgrade storage (or use another account)\n\n"
+                "💡 Use Excel export instead - it works offline!"
+            )
+        elif "drive api" in error_msg.lower():
+            return None, (
+                "⚠️ Google Drive API not enabled.\n\n"
+                "Enable it here:\n"
+                "https://console.developers.google.com/apis/api/drive.googleapis.com\n\n"
+                "Then click 'ENABLE' button.\n\n"
+                "💡 Meanwhile, use Excel export!"
+            )
+        else:
+            return None, f"❌ Error creating Google Sheet: {error_msg}\n\n💡 Try Excel export instead!"
+
+async def handle_export_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle export button callbacks."""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "export_cancel":
+        await query.edit_message_text("👍 Export cancelled.")
+        return
+    
+    user_id = update.effective_user.id
+    
+    if query.data == "export_excel":
+        await query.edit_message_text("📥 Generating Excel file...")
+        try:
+            excel_file = await export_to_excel(user_id)
+            filename = f"urfinance_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            
+            await query.message.reply_document(
+                document=excel_file,
+                filename=filename,
+                caption="✅ Here's your spending analysis in Excel format!\n📊 Contains: Summary, Top Vendors, Weekly Breakdown, and All Invoices"
+            )
+            await query.edit_message_text("✅ Excel file sent successfully!")
+            
+        except Exception as e:
+            await query.edit_message_text(f"❌ Error generating Excel file: {str(e)}")
+    
+    elif query.data == "export_sheets":
+        await query.edit_message_text("📊 Creating Google Sheet...")
+        try:
+            sheet_url, error_msg = await export_to_google_sheets(user_id)
+            
+            if error_msg:
+                await query.edit_message_text(error_msg)
+            elif sheet_url:
+                await query.edit_message_text(
+                    f"✅ Google Sheet created successfully!\n\n"
+                    f"🔗 Access your spreadsheet here:\n{sheet_url}\n\n"
+                    f"📝 Note: You may need to request access if using a service account."
+                )
+            else:
+                await query.edit_message_text("❌ Failed to create Google Sheet.")
+                
+        except Exception as e:
+            await query.edit_message_text(f"❌ Error creating Google Sheet: {str(e)}")
+
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle errors caused by Updates."""
     import logging
@@ -628,6 +866,9 @@ async def main() -> None:
     application.add_handler(CommandHandler("clear", clear_command))
     application.add_handler(CommandHandler("chat", chat_command))
     application.add_handler(CommandHandler("chatmode", chatmode_command))
+    
+    # Handle callback queries (for inline keyboard buttons)
+    application.add_handler(CallbackQueryHandler(handle_export_callback))
     
     # Handle photo messages (invoice images)
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
