@@ -174,30 +174,30 @@ graph TD
 
 ```mermaid
 graph LR
-    subgraph "1. Input"
+    subgraph "Step 1 - Input"
         IMG[📸 Invoice Photo]
     end
     
-    subgraph "2. Encoding"
+    subgraph "Step 2 - Encoding"
         B64[Base64 Encode]
     end
     
-    subgraph "3. AI Extraction"
+    subgraph "Step 3 - AI Extraction"
         LLM[Groq LLM]
         PROMPT[Extraction Prompt]
     end
     
-    subgraph "4. AI Response"
+    subgraph "Step 4 - AI Response"
         JSON[JSON Data:<br/>- Shop Name<br/>- Date<br/>- Total<br/>- Items]
     end
     
-    subgraph "5. Validation"
+    subgraph "Step 5 - Validation"
         V1[Date Format]
         V2[Currency Parse]
         V3[Type Detection]
     end
     
-    subgraph "6. Storage"
+    subgraph "Step 6 - Storage"
         DB[(Database)]
     end
     
