@@ -199,8 +199,9 @@ async def analysis_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
         # Then, generate and send the visualization with user_id
         await update.message.reply_text("📊 Generating your comprehensive analysis dashboard...")
-        buf = get_visualization(user_id=update.effective_user.id)
-        await update.message.reply_photo(buf)
+        if update.effective_user and update.effective_user.id:
+            buf = get_visualization(user_id=update.effective_user.id)
+            await update.message.reply_photo(buf)
         
         # Ask if user wants to export to spreadsheet
         keyboard = [
@@ -402,7 +403,7 @@ async def check_limit_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def visualizations_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send visualization dashboard to user."""
-    if not update.message:
+    if not update.message or not update.effective_user:
         return
         
     try:
@@ -562,12 +563,14 @@ async def export_to_excel(user_id: int, weeks_back: int = 8) -> BytesIO:
         # Weekly Breakdown sheet
         weekly_breakdown = []
         for week, data in weekly_data['weekly_breakdown'].items():
+            # Calculate average per transaction for this week
+            avg_amount = data['total'] / data['count'] if data['count'] > 0 else 0
             weekly_breakdown.append({
                 'Week': week,
                 'Date Range': data['range'],
                 'Total (Rp)': data['total'],
                 'Count': data['count'],
-                'Average (Rp)': data['average']
+                'Average (Rp)': avg_amount
             })
         weekly_df = pd.DataFrame(weekly_breakdown)
         weekly_df.to_excel(writer, sheet_name='Weekly Breakdown', index=False)
@@ -595,8 +598,8 @@ async def export_to_google_sheets(user_id: int, weeks_back: int = 8):
     This function will guide users through the Google Sheets setup.
     """
     try:
-        import gspread
-        from oauth2client.service_account import ServiceAccountCredentials
+        import gspread  # type: ignore
+        from oauth2client.service_account import ServiceAccountCredentials  # type: ignore
         
         # Check if credentials file exists
         credentials_path = Path(__file__).parent.parent / 'google_credentials.json'
@@ -699,6 +702,9 @@ async def export_to_google_sheets(user_id: int, weeks_back: int = 8):
 async def handle_export_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle export button callbacks."""
     query = update.callback_query
+    if not query or not update.effective_user:
+        return
+        
     await query.answer()
     
     if query.data == "export_cancel":
@@ -713,11 +719,13 @@ async def handle_export_callback(update: Update, context: ContextTypes.DEFAULT_T
             excel_file = await export_to_excel(user_id)
             filename = f"urfinance_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
             
-            await query.message.reply_document(
-                document=excel_file,
-                filename=filename,
-                caption="✅ Here's your spending analysis in Excel format!\n📊 Contains: Summary, Top Vendors, Weekly Breakdown, and All Invoices"
-            )
+            # Type guard for message
+            if query.message and hasattr(query.message, 'reply_document'):
+                await query.message.reply_document(  # type: ignore
+                    document=excel_file,
+                    filename=filename,
+                    caption="✅ Here's your spending analysis in Excel format!\n📊 Contains: Summary, Top Vendors, Weekly Breakdown, and All Invoices"
+                )
             await query.edit_message_text("✅ Excel file sent successfully!")
             
         except Exception as e:

@@ -1,8 +1,31 @@
-# 🎯 UrFinance Telegram Bot - Key Features
+# 🎯 UrFinance Telegram Bot - Final Key Features
 
 **Your Personal AI-Powered Finance Assistant on Telegram**
 
-Track spending effortlessly with AI-powered receipt scanning, instant insights, and smart budget alerts - all from your phone.
+Track spending effortlessly with AI-powered receipt scanning, instant insights, smart budget alerts, and professional spreadsheet exports - all from your phone.
+
+---
+
+## 🆕 Latest Features (October 2025)
+
+### 📊 **Spreadsheet Export Integration** (NEW!)
+- **📥 Excel Export**: Download your analysis as a professional Excel file with 4 comprehensive sheets
+- **🌐 Google Sheets Export**: Create live, shareable spreadsheets with auto-permissions
+- **🎛️ Interactive Buttons**: Export directly from `/analysis` command with inline keyboard
+- **📈 4 Data Sheets**: Summary, Top Vendors, Weekly Breakdown, and All Invoices
+- **☁️ Cloud Integration**: Full Google Sheets API integration with service account
+
+### 🎨 **Adaptive Dashboard Intelligence** (NEW!)
+- **📅 Smart Time Granularity**: Automatically switches between daily/weekly views based on data
+- **💳 Budget Status Cards**: Color-coded budget tracking (Green/Orange/Red)
+- **📊 Enhanced Visualizations**: Professional charts with proper formatting and labels
+- **🎯 Contextual Insights**: AI-generated observations tailored to your spending patterns
+
+### 🤖 **Advanced Chat Features** (NEW!)
+- **💬 Chat Mode Toggle**: Switch between one-off queries and continuous conversation
+- **🔄 Multi-turn Function Calling**: Bot remembers context across conversations
+- **💰 Cost Optimization**: Chat mode OFF by default to save API costs
+- **📝 Smart History**: Maintains last 10 exchanges with automatic truncation
 
 ---
 
@@ -291,7 +314,226 @@ Bot: [Shows comprehensive command guide with examples]
 
 ---
 
-## 📱 Use Cases
+## � Spreadsheet Export Features (NEW!)
+
+### Excel Export
+**Instant Download with Comprehensive Data**
+
+When you click "📥 Export to Excel" after `/analysis`:
+
+**4 Professional Sheets:**
+1. **Summary Sheet**
+   - Total Spent, Total Invoices, Average Amount
+   - Trend analysis (Increasing/Decreasing/Stable)
+   - Trend percentage change
+   - Weekly and Daily averages
+
+2. **Top Vendors Sheet**
+   - Vendor name and total spending
+   - Transaction count per vendor
+   - Average spending per vendor
+
+3. **Weekly Breakdown Sheet**
+   - Week-by-week analysis
+   - Date ranges for each week
+   - Total spent, transaction count, and average per week
+
+4. **All Invoices Sheet**
+   - Complete transaction history (last 50 invoices)
+   - Date, Vendor, Amount, Transaction Type
+   - Processing timestamp
+
+**Example:**
+```
+You: /analysis
+Bot: [Sends dashboard]
+     📋 Do you want to export this analysis to a spreadsheet?
+     [📥 Export to Excel] [📊 Export to Google Sheets] [❌ No, thanks]
+
+You: [Click "📥 Export to Excel"]
+Bot: 📥 Generating Excel file...
+     [Sends: UrFinance_Analysis_2025-10-22_12-30.xlsx]
+     ✅ Excel file generated successfully!
+```
+
+### Google Sheets Export
+**Live, Shareable Spreadsheets in the Cloud**
+
+When you click "📊 Export to Google Sheets":
+
+**Features:**
+- 📊 Creates new Google Spreadsheet in your account
+- 🔗 Auto-sharing with view/edit permissions
+- ☁️ Accessible from anywhere
+- 📱 Works on mobile, tablet, desktop
+- 🔄 Can be updated and shared with others
+
+**Sheets Created:**
+1. Summary with key metrics
+2. Top Vendors ranking
+3. Weekly breakdown with trends
+4. Complete invoice list
+
+**Example:**
+```
+You: /analysis
+Bot: [Sends dashboard with export options]
+
+You: [Click "📊 Export to Google Sheets"]
+Bot: 📊 Creating Google Spreadsheet...
+     
+     ✅ Spreadsheet created successfully!
+     📊 Title: UrFinance Analysis - 2025-10-22 12:30
+     🔗 Link: https://docs.google.com/spreadsheets/d/...
+     
+     You can view and edit this spreadsheet online!
+```
+
+**Setup Required:**
+- Google Cloud Project with Sheets API enabled
+- Service Account credentials
+- See [GOOGLE_SHEETS_SETUP.md](GOOGLE_SHEETS_SETUP.md) for details
+
+---
+
+## 🎨 Adaptive Dashboard Intelligence (NEW!)
+
+### Smart Time Granularity
+
+**Automatically Adjusts Based on Your Data**
+
+The dashboard intelligently switches between daily and weekly views:
+
+**Daily View** (Short-term data):
+- Used when: Less than 14 days of data or fewer than 2 weeks
+- Shows: Day-by-day spending breakdown
+- Charts: Daily spending bars with specific dates
+- Perfect for: Recent tracking, new users
+
+**Weekly View** (Long-term data):
+- Used when: 14+ days of data with 2+ weeks
+- Shows: Week-by-week spending trends
+- Charts: Weekly aggregations with date ranges
+- Perfect for: Established users, pattern analysis
+
+**Adaptive Insights:**
+```
+Short-term data:
+"📊 Insights: Spending ↑ 15% | Daily avg: Rp 150K | Budget: 45% used"
+
+Long-term data:
+"📊 Insights: Spending stable | Weekly avg: Rp 1.2M | Daily avg: Rp 171K | Budget: 68% used"
+```
+
+### Enhanced Budget Cards
+
+**Color-Coded Visual Indicators**
+
+The 4th KPI card shows your budget status with smart colors:
+
+- **🟢 Green (Under 75%)**: "Safe Zone" - You're doing great!
+- **🟠 Orange (75-99%)**: "Warning Zone" - Watch your spending
+- **🔴 Red (100%+)**: "Over Budget" - Exceeded limit
+- **⚪ Gray**: "Not Set" - No budget configured
+
+**Example Dashboard:**
+```
+┌─────────────┬─────────────┬─────────────┬─────────────┐
+│ Total Spent │  Invoices   │ Avg Amount  │   Budget    │
+│  Rp 3.5M    │     25      │  Rp 140K    │ 🟢 70% Used │
+└─────────────┴─────────────┴─────────────┴─────────────┘
+```
+
+### Professional Formatting
+
+**Beautiful, Readable Numbers**
+
+All amounts now use smart formatting:
+- **Millions**: Rp 5.2M (instead of Rp 5,200,000)
+- **Thousands**: Rp 850K (instead of Rp 850,000)
+- **Small amounts**: Rp 125 (exact value)
+
+**Applied everywhere:**
+- Dashboard KPI cards
+- Chart axis labels
+- Excel exports
+- AI insights footer
+
+---
+
+## 💬 Advanced Chat System (NEW!)
+
+### Chat Mode Management
+
+**Two Modes for Different Needs**
+
+**Default Mode (Chat OFF):**
+- Saves API costs
+- Use `/chat <question>` for one-time queries
+- Bot only responds to commands
+- Perfect for daily use
+
+**Continuous Mode (Chat ON):**
+- Enable with `/chatmode on`
+- All messages get AI responses
+- Full conversation context
+- Great for deep analysis sessions
+
+**Example Usage:**
+```
+Checking Status:
+You: /chatmode
+Bot: 💬 Chat Mode Status: OFF ❌
+     
+     Usage:
+     • /chatmode on - Enable continuous chat
+     • /chatmode off - Disable (save API costs)
+     • /chat <message> - One-off AI query (works anytime)
+
+Enabling Chat Mode:
+You: /chatmode on
+Bot: ✅ Chat mode enabled!
+     
+     I'll now respond to all your messages. Just type naturally.
+     Use /chatmode off to disable.
+
+Continuous Conversation:
+You: How much did I spend this week?
+Bot: Based on your data, you spent Rp 1,250,000 this week...
+
+You: Is that more than last week?
+Bot: Yes, that's 15% more than last week's Rp 1,087,000...
+
+You: What can I do to reduce it?
+Bot: Here are some suggestions based on your patterns...
+
+Disabling:
+You: /chatmode off
+Bot: ❌ Chat mode disabled.
+     
+     I'll only respond to commands now.
+     Use /chat <message> for one-off AI queries.
+```
+
+### Multi-turn Function Calling
+
+**Intelligent Context Management**
+
+The bot now maintains conversation context:
+- Remembers last 10 exchanges (20 messages)
+- Understands follow-up questions
+- Links queries to previous answers
+- Automatic context cleanup to prevent token overflow
+
+**Smart Features:**
+- Context window management
+- Automatic history truncation
+- User-specific conversation storage
+- `/clear` command to reset
+
+---
+
+## �📱 Use Cases
 
 ### Daily Shopper
 "I shop almost every day at local stores. The bot automatically tracks everything so I don't have to remember or keep paper receipts."
@@ -310,20 +552,22 @@ Bot: [Shows comprehensive command guide with examples]
 - Expense discipline
 
 ### Small Business Owner
-"I track business expenses by uploading supplier receipts. The dashboard shows me spending trends and top vendors."
+"I track business expenses by uploading supplier receipts. The dashboard shows me spending trends and top vendors. The Excel export makes monthly reports easy!"
 
 **Perfect For:**
 - Business expense tracking
 - Vendor spending analysis
 - Tax preparation documentation
+- Monthly financial reports
 
 ### Family Finance Manager
-"Each family member has their own bot instance. We can track who's spending what and stay within our household budget."
+"Each family member has their own bot instance. We can track who's spending what and stay within our household budget. Google Sheets export lets us share reports!"
 
 **Perfect For:**
 - Family budget management
 - Teaching kids about spending
 - Shared expense tracking
+- Collaborative financial planning
 
 ---
 
@@ -357,6 +601,9 @@ Bot: [Shows comprehensive command guide with examples]
 8. **💪 Powerful**: Advanced features when you need them
 9. **🆓 Cost-Effective**: Minimal API costs with smart features
 10. **📚 Supported**: Clear documentation and active updates
+11. **📥 Professional Exports**: Excel & Google Sheets integration (NEW!)
+12. **🎨 Adaptive Interface**: Smart dashboards adjust to your data (NEW!)
+13. **💬 Flexible Chat**: Toggle between cost-saving and conversation modes (NEW!)
 
 ---
 
@@ -368,7 +615,9 @@ Bot: [Shows comprehensive command guide with examples]
 | **Setup Time** | ✅ 2 minutes | ❌ 10+ minutes |
 | **AI Chat** | ✅ Natural language | ❌ Not available |
 | **Budget Alerts** | ✅ Real-time, automatic | ⚠️ Manual checking |
-| **Visual Dashboards** | ✅ Comprehensive | ⚠️ Basic charts |
+| **Visual Dashboards** | ✅ Comprehensive + Adaptive | ⚠️ Basic charts |
+| **Spreadsheet Export** | ✅ Excel + Google Sheets | ⚠️ CSV only |
+| **Chat Mode Control** | ✅ Toggle ON/OFF | ❌ Always on |
 | **Platform** | ✅ Telegram (no install) | ❌ Separate app |
 | **Data Privacy** | ✅ Your database | ❌ Cloud storage |
 | **Batch Processing** | ✅ CLI available | ❌ Not available |
@@ -380,27 +629,38 @@ Bot: [Shows comprehensive command guide with examples]
 ## 🎓 Advanced Tips
 
 ### Optimize API Costs
-- Keep chat mode OFF by default
+- Keep chat mode OFF by default (saves money!)
 - Use `/chat` for one-off questions
-- Only enable `/chatmode on` for deep analysis
-- Clear history with `/clear` when done
+- Only enable `/chatmode on` for deep analysis sessions
+- Disable with `/chatmode off` when done
+- Clear history with `/clear` to start fresh
 
 ### Best Photo Practices
 - Use natural lighting when possible
 - Hold phone steady and parallel
 - Ensure all text is readable
 - Avoid shadows and glare
+- Capture full receipt including totals
 
 ### Maximize Insights
-- Review `/analysis` weekly
-- Set realistic budgets
-- Use AI chat to understand patterns
-- Adjust spending based on insights
+- Review `/analysis` weekly for patterns
+- Set realistic budgets with `/set_limit`
+- Use AI chat to understand spending trends
+- Export to Excel for detailed analysis
+- Share Google Sheets with accountant/family
+
+### Professional Reporting
+- Export to Excel for offline analysis
+- Use Google Sheets for collaborative review
+- Monthly exports for record-keeping
+- Share spreadsheets with team/family
+- Keep exports organized by date
 
 ### Batch Historical Data
 - Save old receipts
 - Process all at once via CLI: `python run.py`
 - View complete history in dashboard
+- Export to spreadsheet for comprehensive review
 
 ---
 
@@ -410,6 +670,8 @@ Bot: [Shows comprehensive command guide with examples]
 - **Technical Docs**: [WORKFLOW_OVERVIEW.md](WORKFLOW_OVERVIEW.md) - System architecture
 - **Quick Reference**: `/help` command in bot
 - **Dashboard Guide**: [DASHBOARD_QUICK_GUIDE.md](DASHBOARD_QUICK_GUIDE.md)
+- **Export Setup**: [GOOGLE_SHEETS_SETUP.md](GOOGLE_SHEETS_SETUP.md) - Google Sheets integration
+- **Export Features**: [SPREADSHEET_EXPORT_IMPLEMENTATION.md](SPREADSHEET_EXPORT_IMPLEMENTATION.md) - Technical details
 
 ---
 
@@ -427,7 +689,103 @@ Bot: [Shows comprehensive command guide with examples]
 
 ---
 
+## 🎯 Complete Feature List
+
+### 📸 Receipt Processing
+- ✅ AI-powered OCR with Groq LLM
+- ✅ Multi-format support (JPG, JPEG, PNG)
+- ✅ Auto-extraction of dates, vendors, amounts, items
+- ✅ Smart validation and standardization
+- ✅ Auto-categorization (Bank/Retail/E-commerce)
+- ✅ 5-10 second processing time
+
+### 📊 Analysis & Visualization
+- ✅ 4-panel KPI dashboard
+- ✅ Adaptive time granularity (daily/weekly)
+- ✅ Color-coded budget status
+- ✅ Spending trend line charts
+- ✅ Top vendors bar charts
+- ✅ Transaction type pie charts
+- ✅ Daily spending breakdown
+- ✅ Recent transactions table
+- ✅ AI-generated insights
+- ✅ Professional number formatting (K/M suffixes)
+
+### 💰 Budget Management
+- ✅ Monthly spending limits
+- ✅ Automatic threshold alerts (90%, 100%)
+- ✅ Real-time budget tracking
+- ✅ Color-coded status indicators
+- ✅ Percentage usage display
+- ✅ Remaining amount calculator
+
+### 🤖 AI Chat Assistant
+- ✅ Natural language queries
+- ✅ Two-mode system (one-off/continuous)
+- ✅ Chat mode toggle (`/chatmode on/off`)
+- ✅ Multi-turn conversation support
+- ✅ Context memory (last 10 exchanges)
+- ✅ Cost optimization (default OFF)
+- ✅ Smart history management
+- ✅ `/clear` command for reset
+
+### 📥 Spreadsheet Export
+- ✅ Excel file generation (.xlsx)
+- ✅ Google Sheets integration
+- ✅ 4 comprehensive data sheets
+- ✅ Summary, Vendors, Weekly, All Invoices
+- ✅ Interactive inline keyboard
+- ✅ Auto-sharing with permissions
+- ✅ Downloadable files
+- ✅ Cloud-accessible spreadsheets
+
+### 📋 Quick Access
+- ✅ Recent invoices view (last 5)
+- ✅ Command keyboard menu
+- ✅ Interactive buttons
+- ✅ Context-aware help
+- ✅ Error handling & recovery
+
+### 💻 Developer Features
+- ✅ CLI batch processing
+- ✅ SQLite database
+- ✅ Python-based architecture
+- ✅ Modular design
+- ✅ Comprehensive logging
+- ✅ Error tracking
+- ✅ Open source code
+
+### 🔒 Security & Privacy
+- ✅ Local data storage
+- ✅ No cloud upload (images deleted after processing)
+- ✅ Per-user isolation
+- ✅ Service account authentication (Google)
+- ✅ Transparent operations
+
+---
+
+## 📈 Version History
+
+**Version 2.1** (October 22, 2025)
+- ✅ Spreadsheet export (Excel + Google Sheets)
+- ✅ Adaptive dashboard with smart time granularity
+- ✅ Chat mode toggle system
+- ✅ Multi-turn conversation support
+- ✅ Enhanced budget tracking with color-coding
+- ✅ Professional number formatting
+
+**Version 2.0** (October 2025)
+- ✅ Core AI receipt processing
+- ✅ Visual dashboard with KPIs
+- ✅ Budget management system
+- ✅ AI chat assistant
+- ✅ Telegram bot interface
+- ✅ CLI batch processing
+
+---
+
 **UrFinance Telegram Bot**  
 *Smart Finance Tracking, Simplified*
 
-Version 2.0 | October 2025 | Built with ❤️ using AI
+**Version 2.1** | October 2025 | Built with ❤️ using AI  
+**Latest Update**: Spreadsheet Export & Adaptive Dashboard Intelligence
