@@ -4,10 +4,18 @@ import os
 from dotenv import load_dotenv
 import sys
 import asyncio
+import logging
 from pathlib import Path
 import pandas as pd
 from io import BytesIO
 from datetime import datetime
+
+# Set up logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent
@@ -96,6 +104,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "• Just send me a photo of any receipt or invoice\n"
         "• Type /upload_invoice to start uploading\n\n"
         "💰 Track Your Spending:\n"
+        "• /analysis - See spending patterns + interactive dashboard link 🎨\n"
+        "• /recent_invoices - Check your latest 5 expenses\n\n"
+        "💰 Track Your Spending:\n"
         "• /analysis - See your overall spending patterns and visualization\n"
         "• /recent_invoices - Check your latest 5 expenses\n\n"
         "🎯 Budget Management:\n"
@@ -177,10 +188,12 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def analysis_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Show invoice summary and analysis, then send visualization."""
-    if not update.message:
+    if not update.message or not update.effective_user:
         return
         
     try:
+        from telegram_bot.marimo_integration import create_interactive_dashboard, check_server_health
+        
         # Send text summary first
         analysis = analyze_invoices()
         
@@ -197,11 +210,35 @@ async def analysis_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         
         await update.message.reply_text(summary)
 
-        # Then, generate and send the visualization with user_id
+        # Send the visualization image
         await update.message.reply_text("📊 Generating your comprehensive analysis dashboard...")
-        if update.effective_user and update.effective_user.id:
-            buf = get_visualization(user_id=update.effective_user.id)
-            await update.message.reply_photo(buf)
+        buf = get_visualization(user_id=update.effective_user.id)
+        await update.message.reply_photo(buf)
+        
+        # Create interactive dashboard link if server is available
+        await update.message.reply_text("🎨 Creating interactive dashboard...")
+        if check_server_health():
+            result = create_interactive_dashboard(user_id=update.effective_user.id)
+            if result['success']:
+                await update.message.reply_text(
+                    f"✨ Interactive Dashboard Ready!\n\n"
+                    f"🔗 {result['url']}\n\n"
+                    f"💡 Click to explore your data with:\n"
+                    f"• Filter by date, shop, transaction type\n"
+                    f"• Interactive charts you can zoom/hover\n"
+                    f"• Detailed transaction tables\n\n"
+                    f"⏰ Link expires in {result['timeout_minutes']} minutes"
+                )
+            else:
+                await update.message.reply_text(
+                    "⚠️ Could not create interactive dashboard.\n"
+                    "The image analysis above shows your data."
+                )
+        else:
+            await update.message.reply_text(
+                "ℹ️ Interactive dashboard server is not available.\n"
+                "You can still see the analysis in the image above."
+            )
         
         # Ask if user wants to export to spreadsheet
         keyboard = [
@@ -412,6 +449,62 @@ async def visualizations_command(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_photo(buf)
     except Exception as e:
         await update.message.reply_text(f"❌ Error generating visualization: {str(e)}")
+
+async def interactive_dashboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Generate an interactive Marimo dashboard link for the user."""
+    if not update.message or not update.effective_user:
+        return
+    
+    from telegram_bot.marimo_integration import create_interactive_dashboard, check_server_health
+    
+    try:
+        # Check if server is running
+        await update.message.reply_text("🔍 Checking dashboard server...")
+        
+        if not check_server_health():
+            await update.message.reply_text(
+                "❌ Interactive dashboard server is currently unavailable.\n"
+                "Please contact the administrator or try again later."
+            )
+            return
+        
+        # Create dashboard session
+        await update.message.reply_text("🎨 Creating your interactive dashboard...")
+        
+        result = create_interactive_dashboard(user_id=update.effective_user.id)
+        
+        if result['success']:
+            url = result['url']
+            timeout_minutes = result['timeout_minutes']
+            
+            message = (
+                "✨ Your interactive dashboard is ready!\n\n"
+                f"🔗 Click here to explore: {url}\n\n"
+                "💡 What you can do:\n"
+                "• 🎯 Filter data by date range\n"
+                "• 📊 Interactive charts & graphs\n"
+                "• 🔍 Explore transaction details\n"
+                "• 📈 Analyze spending trends\n"
+                "• 🏪 View vendor statistics\n\n"
+                f"⏰ This link will expire in {timeout_minutes} minutes.\n\n"
+                "💾 Tip: Bookmark the link to access it anytime during the session!"
+            )
+            
+            await update.message.reply_text(message)
+        else:
+            error = result.get('error', 'Unknown error')
+            await update.message.reply_text(
+                f"❌ Failed to create interactive dashboard.\n\n"
+                f"Error: {error}\n\n"
+                "Please try again or contact support."
+            )
+    
+    except Exception as e:
+        logger.error(f"Error in interactive_dashboard_command: {e}")
+        await update.message.reply_text(
+            f"❌ An unexpected error occurred: {str(e)}\n\n"
+            "Please try again later."
+        )
 
 async def clear_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Clears the user's chat history."""

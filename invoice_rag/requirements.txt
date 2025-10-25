@@ -33,3 +33,7 @@ oauth2client>=4.1.3
 aiohttp>=3.8.0
 fastapi>=0.104.0
 uvicorn>=0.24.0
+
+# Marimo interactive dashboard dependencies
+marimo>=0.9.0
+flask>=3.0.0
