@@ -12,6 +12,16 @@ pydantic>=2.0.0
 # Database dependencies
 sqlalchemy>=2.0.0
 
+# Supabase dependencies (for PostgreSQL migration)
+supabase>=2.22.2
+postgrest>=2.22.2
+psycopg2-binary>=2.9.11
+realtime>=2.22.2
+storage3>=2.22.2
+supabase-auth>=2.22.2
+supabase-functions>=2.22.2
+strenum>=0.4.15
+
 # Environment and utilities
 python-dotenv>=1.0.0
 
