@@ -46,7 +46,7 @@ def test_dashboard_file():
 def test_database_exists():
     """Test if database exists."""
     print("🧪 Testing database...")
-    db_path = Path(__file__).parent / "invoices.db"
+    db_path = Path(__file__).parent / "database" / "invoices.db"
     if db_path.exists():
         print(f"   ✅ Database found at {db_path}")
         return True

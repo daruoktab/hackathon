@@ -32,7 +32,7 @@ def _(mo):
 def _(datetime, os, pd, sqlite3, timedelta):
     def get_db_path():
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        return os.path.join(current_dir, 'invoices.db')
+        return os.path.join(current_dir, 'database', 'invoices.db')
 
     def load_data(weeks_back=8):
         db_path = get_db_path()

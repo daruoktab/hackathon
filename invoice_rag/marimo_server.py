@@ -70,7 +70,7 @@ class SessionManager:
         
         print(f"Copying database...")
         # Copy the database for this session (isolated view)
-        original_db = Path(__file__).parent / "invoices.db"
+        original_db = Path(__file__).parent / "database" / "invoices.db"
         session_db = Path(temp_dir) / "invoices.db"
         
         if original_db.exists():

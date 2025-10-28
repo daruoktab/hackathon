@@ -103,7 +103,7 @@ def pre_flight_check():
     all_good = True
 
     # Check SQLite database exists
-    db_path = Path(__file__).parent.parent / 'invoices.db'
+    db_path = Path(__file__).parent.parent / 'database' / 'invoices.db'
     if db_path.exists():
         print(f"✅ SQLite database found: {db_path}")
 

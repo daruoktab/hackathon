@@ -28,7 +28,7 @@ def get_default_db_path():
     current_file = os.path.abspath(__file__)
     src_dir = os.path.dirname(current_file)
     invoice_rag_dir = os.path.dirname(src_dir)
-    return os.path.join(invoice_rag_dir, 'invoices.db')
+    return os.path.join(invoice_rag_dir, 'database', 'invoices.db')
 
 def is_supabase():
     """Check if using Supabase"""

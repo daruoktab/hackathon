@@ -14,7 +14,7 @@ def get_db_path():
     current_file = os.path.abspath(__file__)
     migration_dir = os.path.dirname(current_file)
     invoice_rag_dir = os.path.dirname(migration_dir)
-    return os.path.join(invoice_rag_dir, 'invoices.db')
+    return os.path.join(invoice_rag_dir, 'database', 'invoices.db')
 
 def export_table(cursor, table_name):
     """Export a single table to a list of dictionaries"""

@@ -55,7 +55,7 @@ services:
       - WHATSAPP_BOT_HOST=0.0.0.0
       - WHATSAPP_BOT_PORT=8000
     volumes:
-      - ./invoices.db:/app/invoices.db
+      - ./database/invoices.db:/app/database/invoices.db
       - ./dashboard_output:/app/dashboard_output
     restart: unless-stopped
     networks:
@@ -74,7 +74,7 @@ services:
       - GROQ_API_KEY=${GROQ_API_KEY}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
     volumes:
-      - ./invoices.db:/app/invoices.db
+      - ./database/invoices.db:/app/database/invoices.db
       - ./dashboard_output:/app/dashboard_output
     restart: unless-stopped
     networks:
@@ -93,7 +93,7 @@ services:
     environment:
       - GROQ_API_KEY=${GROQ_API_KEY}
     volumes:
-      - ./invoices.db:/app/invoices.db
+      - ./database/invoices.db:/app/database/invoices.db
       - ./dashboard_output:/app/dashboard_output
     restart: unless-stopped
     networks:

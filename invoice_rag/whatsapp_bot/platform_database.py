@@ -13,7 +13,7 @@ from src.analysis import analyze_invoices
 def get_db_path():
     """Get the database path"""
     current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(current_dir, 'invoices.db')
+    return os.path.join(current_dir, 'database', 'invoices.db')
 
 
 def init_platform_tables():

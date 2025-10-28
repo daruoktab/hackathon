@@ -12,10 +12,10 @@ def backup_database():
     """Create a timestamped backup of the database"""
     
     # Database file
-    db_file = Path('invoices.db')
+    db_file = Path('database') / 'invoices.db'
     
     if not db_file.exists():
-        print("❌ Database file 'invoices.db' not found")
+        print("❌ Database file 'database/invoices.db' not found")
         return False
     
     # Create backups directory

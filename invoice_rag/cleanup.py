@@ -19,7 +19,7 @@ from datetime import datetime
 
 def get_database_path():
     """Get the correct database path."""
-    db_path = 'invoices.db'
+    db_path = os.path.join('database', 'invoices.db')
     if os.path.exists(db_path):
         return db_path
     return None
@@ -32,7 +32,7 @@ def check_database_exists():
         print(f"Found database: {db_path} ({size} bytes)")
         return db_path
     else:
-        print("Database not found: invoices.db")
+        print("Database not found: database/invoices.db")
         return None
 
 def show_database_stats(db_path):
