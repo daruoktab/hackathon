@@ -1,4 +1,4 @@
-# 🧾 AI Invoice Processing System
+# 🧾 UrFinance - Your Friendly Expense Tracker
 
 A powerful AI-powered invoice processing system that helps you track your spending effortlessly. Simply snap a photo of any receipt, and let AI extract all the details, analyze your spending patterns, and keep you within budget.
 
@@ -6,7 +6,22 @@ Perfect for personal finance tracking, expense management, and staying on top of
 
 ---
 
-## 📚 Documentation
+## 🚀 Quick Deploy
+
+**Deploy to Railway.app in 5 minutes:**
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app)
+
+1. Click button above or visit [railway.app](https://railway.app)
+2. Connect your GitHub repository
+3. Add environment variables (Bot Token + API Key)
+4. Deploy! ✅
+
+📖 **Deployment Guide:** [deployment/RAILWAY_QUICKSTART.md](invoice_rag/deployment/RAILWAY_QUICKSTART.md) | [Full Documentation](invoice_rag/deployment/RAILWAY_DEPLOYMENT.md)
+
+---
+
+## �📚 Documentation
 
 Complete documentation is now organized in the `docs/` folder:
 
@@ -17,6 +32,7 @@ Complete documentation is now organized in the `docs/` folder:
 - **[Quick Reference](invoice_rag/docs/QUICK_REFERENCE.md)** - � Fast command reference
 
 **Additional Guides:**
+
 - [Dashboard Guide](invoice_rag/docs/guides/DASHBOARD_GUIDE.md)
 - [Export Guide](invoice_rag/docs/guides/EXPORT_GUIDE.md)
 - [Testing Guide](invoice_rag/docs/guides/TESTING_GUIDE.md)
@@ -27,6 +43,7 @@ Complete documentation is now organized in the `docs/` folder:
 ## 🎯 What Can You Do?
 
 ### 📱 Via Telegram Bot (Interactive)
+
 - **📸 Snap & Track**: Take a photo of any receipt → AI extracts all details automatically
 - **📊 Visual Insights**: Get beautiful dashboards showing spending trends, top vendors, and patterns
 - **💰 Budget Tracking**: Set monthly limits and get alerts when you're close to exceeding them
@@ -34,6 +51,7 @@ Complete documentation is now organized in the `docs/` folder:
 - **📋 Quick Reports**: View recent invoices, spending summaries, and budget status instantly
 
 ### 💻 Via Command Line (Batch Processing)
+
 - **🔄 Bulk Processing**: Process dozens of invoices at once from a folder
 - **⚡ Fast & Efficient**: Perfect for catching up on historical receipts
 - **🗄️ Database Storage**: All data saved to SQLite for analysis
@@ -41,12 +59,14 @@ Complete documentation is now organized in the `docs/` folder:
 ## 🚀 Core Features
 
 ### Intelligent Data Extraction
+
 - **🤖 AI-Powered OCR**: Uses Groq LLM (Meta-Llama models) to extract structured data from images
 - **✅ Smart Validation**: Automatically handles various date formats, currency notations, and transaction types
 - **� Multi-Format Support**: Works with JPG, JPEG, and PNG images
 - **🏷️ Auto-Categorization**: Detects transaction type (Bank/Retail/E-commerce) automatically
 
 ### Financial Analysis & Insights
+
 - **� Comprehensive Dashboard**: 4-panel KPI dashboard with spending trends, top vendors, and budget status
 - **📈 Smart Visualization**: Color-coded charts showing daily/weekly patterns, transaction types, and spending distribution
 - **� Budget Management**: Set monthly limits with automatic alerts at 90% and 100% usage
@@ -54,14 +74,16 @@ Complete documentation is now organized in the `docs/` folder:
 - **� Quick Reports**: Instant access to recent invoices, summaries, and spending breakdowns
 
 ### Flexible Interfaces
+
 - **� Telegram Bot**: Your personal finance assistant on-the-go
+
   - 📸 Upload invoices with a photo
   - 📊 View visual dashboards
   - 💬 Chat with AI for insights
   - 💰 Track budget in real-time
   - � Quick access to recent transactions
-  
 - **💻 Command Line**: Batch processing for power users
+
   - 🔄 Process multiple invoices at once
   - ⚡ Fast bulk imports
   - 🖥️ Direct database access
@@ -124,6 +146,7 @@ For detailed step-by-step workflows with visual diagrams, see **[docs/USER_WORKF
 ### Quick Overview
 
 **📱 Telegram Bot - Daily Use:**
+
 1. Take photo of receipt
 2. Send to bot
 3. Get instant confirmation
@@ -131,12 +154,14 @@ For detailed step-by-step workflows with visual diagrams, see **[docs/USER_WORKF
 5. Set budget with `/set_limit`
 
 **💻 CLI - Batch Processing:**
+
 1. Put all images in `invoices/` folder
 2. Run `python run.py`
 3. All invoices processed & saved
 4. View results via Telegram bot
 
 **🤖 AI Chat:**
+
 - `/chat How much did I spend this week?`
 - `/chatmode on` for continuous conversation
 - Ask any question about your finances
@@ -144,12 +169,14 @@ For detailed step-by-step workflows with visual diagrams, see **[docs/USER_WORKF
 ## 🛠️ Installation & Setup
 
 ### 1. Clone & Navigate
+
 ```bash
 git clone <your-repo-url>
 cd hackathon/invoice_rag
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 # Using pip (recommended)
 pip install -r requirements.txt
@@ -171,6 +198,7 @@ notepad .env
 ```
 
 **Required Configuration:**
+
 ```env
 # AI API Key (for invoice extraction)
 GROQ_API_KEY="your_groq_api_key_here"
@@ -185,12 +213,14 @@ OCR_MODEL="meta-llama/llama-4-scout-17b-16e-instruct"
 **🔑 Getting Your API Keys:**
 
 **1. Groq API Key** (Free tier available)
+
 - Visit [Groq Console](https://console.groq.com/)
 - Sign up for free account
 - Generate API key
 - Copy to `.env` file
 
 **2. Telegram Bot Token** (Free)
+
 - Open Telegram
 - Search for [@BotFather](https://t.me/botfather)
 - Send `/newbot`
@@ -204,12 +234,14 @@ OCR_MODEL="meta-llama/llama-4-scout-17b-16e-instruct"
 ### Option 1: Telegram Bot (Recommended for Daily Use) 📱
 
 **Start the bot:**
+
 ```powershell
 cd invoice_rag
 python run_bot.py
 ```
 
 **Then on Telegram:**
+
 1. Open your bot in Telegram
 2. Send `/start` to begin
 3. Take a photo of any receipt and send it
@@ -218,16 +250,17 @@ python run_bot.py
 6. Ask questions: `/chat How much did I spend this week?`
 
 **Essential Commands:**
-| Command | What It Does |
-|---------|-------------|
-| `/start` | Show welcome & menu |
-| `/analysis` | View spending dashboard & charts |
-| `/recent_invoices` | Last 5 transactions |
-| `/set_limit <amount>` | Set monthly budget |
-| `/check_limit` | Check budget status |
-| `/chat <question>` | Ask AI about your spending |
-| `/chatmode on/off` | Enable continuous AI chat |
-| `/help` | Full command list |
+
+| Command                 | What It Does                     |
+| ----------------------- | -------------------------------- |
+| `/start`              | Show welcome & menu              |
+| `/analysis`           | View spending dashboard & charts |
+| `/recent_invoices`    | Last 5 transactions              |
+| `/set_limit <amount>` | Set monthly budget               |
+| `/check_limit`        | Check budget status              |
+| `/chat <question>`    | Ask AI about your spending       |
+| `/chatmode on/off`    | Enable continuous AI chat        |
+| `/help`               | Full command list                |
 
 **💡 Pro Tip:** Just send photos directly - no command needed!
 
@@ -236,6 +269,7 @@ python run_bot.py
 ### Option 2: Batch Processing (For Multiple Invoices) 💻
 
 **Process many invoices at once:**
+
 ```powershell
 # 1. Put all invoice images in invoices/ folder
 cd invoice_rag
@@ -247,12 +281,14 @@ python run.py
 ```
 
 **What happens:**
+
 - ✅ All images in `invoices/` folder are processed
 - ✅ AI extracts data from each invoice
 - ✅ Everything saved to database
 - ✅ View results via Telegram bot `/analysis`
 
 **Perfect for:**
+
 - Processing historical receipts
 - Catching up on backlog
 - Importing old invoices
@@ -262,6 +298,7 @@ python run.py
 ### Complete Example Workflow
 
 **First Time Setup (5 minutes):**
+
 ```powershell
 # 1. Setup environment (one-time)
 cd invoice_rag
@@ -280,6 +317,7 @@ python run_bot.py
 ```
 
 **Daily Usage:**
+
 1. 📸 Take photo of receipt
 2. 📤 Send to bot
 3. ✅ Get confirmation
@@ -292,18 +330,21 @@ python run_bot.py
 When you send `/analysis`, you receive a beautiful 4-panel dashboard:
 
 **4 KPI Cards:**
+
 1. 💰 **Total Spending** - Your total expenses
 2. 📊 **Weekly Average** - Average per week
 3. 🏪 **Top Vendor** - Where you spend most
 4. 💳 **Budget Status** - Color-coded progress (🟢/🟠/🔴)
 
 **Visual Charts:**
+
 - 📈 **Spending Trend** - See patterns over time
 - 🏬 **Top 5 Vendors** - Your most visited shops
 - 💳 **Transaction Types** - Bank/Retail/E-commerce breakdown
 - 📅 **Daily Spending** - Daily expense bars
 
 **Smart Insights:**
+
 - AI-generated observations
 - Budget warnings
 - Spending recommendations
@@ -311,18 +352,21 @@ When you send `/analysis`, you receive a beautiful 4-panel dashboard:
 ### 🤖 AI Chat Assistant
 
 Ask anything about your finances:
+
 - "How much did I spend at Alfamart?"
 - "What was my biggest purchase this month?"
 - "Show me my grocery spending"
 - "Am I spending more than last week?"
 
 **Two Modes:**
+
 - `/chat <question>` - One-off queries (saves API costs)
 - `/chatmode on` - Continuous conversation
 
 ### 💰 Smart Budget Tracking
 
 Set monthly limits and get automatic alerts:
+
 - ✅ **Under 75%** - All good
 - ⚡ **75-89%** - Getting close
 - ⚠️ **90-99%** - Near limit warning
@@ -333,45 +377,49 @@ Set monthly limits and get automatic alerts:
 The database uses a simplified and robust schema to store invoice data.
 
 ### `invoices` Table
-| Field | Type | Description |
-|--------------------|---------|------------------------------------------|
-| `id` | INTEGER | Primary Key |
-| `shop_name` | TEXT | Name of the shop or vendor |
-| `invoice_date` | TEXT | Date from the invoice (YYYY-MM-DD) |
-| `total_amount` | REAL | The final total amount of the invoice |
-| `transaction_type` | TEXT | Type: `bank`, `retail`, or `e-commerce` |
-| `processed_at` | TIMESTAMP| Timestamp when the invoice was processed |
-| `image_path` | TEXT | Path to the original invoice image |
+
+| Field                | Type      | Description                                  |
+| -------------------- | --------- | -------------------------------------------- |
+| `id`               | INTEGER   | Primary Key                                  |
+| `shop_name`        | TEXT      | Name of the shop or vendor                   |
+| `invoice_date`     | TEXT      | Date from the invoice (YYYY-MM-DD)           |
+| `total_amount`     | REAL      | The final total amount of the invoice        |
+| `transaction_type` | TEXT      | Type:`bank`, `retail`, or `e-commerce` |
+| `processed_at`     | TIMESTAMP | Timestamp when the invoice was processed     |
+| `image_path`       | TEXT      | Path to the original invoice image           |
 
 ### `invoice_items` Table
-| Field | Type | Description |
-|-------------|---------|------------------------------------|
-| `id` | INTEGER | Primary Key |
-| `invoice_id` | INTEGER | Foreign key to the `invoices` table |
-| `item_name` | TEXT | Name of the purchased item |
-| `quantity` | INTEGER | Quantity of the item |
-| `unit_price` | REAL | Price per unit of the item |
-| `total_price` | REAL | Total price for the line item |
+
+| Field           | Type    | Description                           |
+| --------------- | ------- | ------------------------------------- |
+| `id`          | INTEGER | Primary Key                           |
+| `invoice_id`  | INTEGER | Foreign key to the `invoices` table |
+| `item_name`   | TEXT    | Name of the purchased item            |
+| `quantity`    | INTEGER | Quantity of the item                  |
+| `unit_price`  | REAL    | Price per unit of the item            |
+| `total_price` | REAL    | Total price for the line item         |
 
 ### `platform_users` Table (Multi-Platform Support)
-| Field | Type | Description |
-|-------------|---------|------------------------------------|
-| `id` | INTEGER | Primary Key |
-| `platform` | TEXT | Platform: `telegram` or `whatsapp` |
-| `platform_user_id` | TEXT | User ID from platform (Telegram ID or Phone) |
-| `display_name` | TEXT | User's display name |
-| `phone_number` | TEXT | Phone number (for WhatsApp users) |
-| `created_at` | TIMESTAMP| User creation timestamp |
-| `last_active` | TIMESTAMP| Last activity timestamp |
+
+| Field                | Type      | Description                                  |
+| -------------------- | --------- | -------------------------------------------- |
+| `id`               | INTEGER   | Primary Key                                  |
+| `platform`         | TEXT      | Platform:`telegram` or `whatsapp`        |
+| `platform_user_id` | TEXT      | User ID from platform (Telegram ID or Phone) |
+| `display_name`     | TEXT      | User's display name                          |
+| `phone_number`     | TEXT      | Phone number (for WhatsApp users)            |
+| `created_at`       | TIMESTAMP | User creation timestamp                      |
+| `last_active`      | TIMESTAMP | Last activity timestamp                      |
 
 ### `spending_limits_v2` Table (Enhanced)
-| Field | Type | Description |
-|---------------|---------|------------------------------------|
-| `id` | INTEGER | Primary Key |
-| `user_id` | INTEGER | Foreign key to `platform_users.id` |
-| `monthly_limit` | REAL | The spending limit amount for the month|
-| `created_at` | TIMESTAMP| Timestamp of creation |
-| `updated_at` | TIMESTAMP| Timestamp of the last update |
+
+| Field             | Type      | Description                             |
+| ----------------- | --------- | --------------------------------------- |
+| `id`            | INTEGER   | Primary Key                             |
+| `user_id`       | INTEGER   | Foreign key to `platform_users.id`    |
+| `monthly_limit` | REAL      | The spending limit amount for the month |
+| `created_at`    | TIMESTAMP | Timestamp of creation                   |
+| `updated_at`    | TIMESTAMP | Timestamp of the last update            |
 
 ## 🔄 System Architecture
 
@@ -381,18 +429,18 @@ Simple and efficient architecture for personal finance tracking:
 graph TD
     A[📱 Telegram User] --> B[Telegram Bot]
     C[💻 CLI User] --> D[Batch Processor]
-    
+  
     B --> E[🤖 AI Processing]
     D --> E
-    
+  
     E --> F[Groq LLM]
     F --> G[Data Validation]
     G --> H[💾 SQLite Database]
-    
+  
     H --> I[📊 Analysis Engine]
     I --> J[📈 Visualization]
     J --> B
-    
+  
     B --> K[🤖 AI Chat]
     K --> F
 ```
@@ -409,6 +457,7 @@ graph TD
 8. **🤖 AI Chat** - Answers questions about your spending
 
 **Data Flow:**
+
 1. User sends invoice photo
 2. AI extracts: date, shop, amount, items
 3. Data validated & standardized
@@ -420,6 +469,7 @@ graph TD
 ### Common Issues & Solutions
 
 **❌ Bot won't start**
+
 ```powershell
 # Check if TELEGRAM_BOT_TOKEN is set
 cat .env
@@ -429,6 +479,7 @@ cat .env
 ```
 
 **❌ Image processing fails**
+
 ```
 Possible causes:
 - ✅ Check GROQ_API_KEY is valid
@@ -439,6 +490,7 @@ Possible causes:
 ```
 
 **❌ "Failed to process invoice"**
+
 ```
 Solutions:
 1. Retake photo with better lighting
@@ -448,6 +500,7 @@ Solutions:
 ```
 
 **❌ Chat not responding**
+
 ```powershell
 # Check if chat mode is enabled
 /chatmode   # Shows current status
@@ -460,6 +513,7 @@ Solutions:
 ```
 
 **❌ Budget not showing in dashboard**
+
 ```powershell
 # Set budget first
 /set_limit 5000000
@@ -484,6 +538,7 @@ Solutions:
 ## 💡 Tips for Best Results
 
 ### 📸 Taking Good Invoice Photos
+
 - ✅ Use good lighting (natural light works best)
 - ✅ Keep phone steady and parallel to receipt
 - ✅ Ensure all text is clearly visible
@@ -491,18 +546,21 @@ Solutions:
 - ✅ Capture the entire receipt
 
 ### 💰 Budget Management
+
 - Set realistic monthly limits
 - Review weekly with `/analysis`
 - Adjust budget based on trends
 - Use alerts to control spending
 
 ### � Using AI Chat Effectively
+
 - Keep chat mode OFF by default (saves API costs)
 - Use `/chat` for specific questions
 - Enable `/chatmode on` for detailed analysis sessions
 - Clear history with `/clear` when done
 
 ### 📊 Analyzing Spending
+
 - Check `/analysis` weekly
 - Look for spending patterns
 - Identify top vendors
@@ -512,6 +570,7 @@ Solutions:
 ## 🎓 Advanced Features
 
 ### Batch Processing Historical Data
+
 ```powershell
 # Process all old receipts at once
 cd invoice_rag
@@ -521,6 +580,7 @@ python run.py
 ```
 
 ### Database Direct Access
+
 ```powershell
 # Check database contents
 python check_database.py
@@ -557,7 +617,7 @@ This project is open source and available under the MIT License.
 
 ---
 
-**Project:** AI Invoice Processing System  
-**Version:** 2.0  
-**Last Updated:** October 22, 2025  
+**Project:** AI Invoice Processing System
+**Version:** 2.0
+**Last Updated:** October 22, 2025
 **Status:** ✅ Production Ready

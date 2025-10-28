@@ -1,0 +1,47 @@
+# Railway deployment ignore file
+# Similar to .gitignore but for Railway deployments
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Local development files
+.env.local
+*.log
+telegram_bot.log
+
+# Test files
+tests/
+test_*.py
+
+# Documentation (not needed for deployment)
+docs/
+
+# Backups
+backups/
+
+# Output files
+dashboard_output/
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Database backups (keep only main database)
+*.db-backup
+*.db.bak
+
+# Git
+.git/
+.gitignore

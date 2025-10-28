@@ -1,5 +1,4 @@
 # Core dependencies
-streamlit>=1.28.0
 pandas>=2.0.0
 numpy>=1.24.0
 pillow>=9.5.0
@@ -12,7 +11,7 @@ pydantic>=2.0.0
 # Database dependencies
 sqlalchemy>=2.0.0
 
-# Supabase dependencies (for PostgreSQL migration)
+# Supabase dependencies (for PostgreSQL migration - optional)
 supabase>=2.22.2
 postgrest>=2.22.2
 psycopg2-binary>=2.9.11
@@ -32,7 +31,7 @@ opencv-python>=4.8.0
 requests>=2.31.0
 
 # Telegram dependencies
-python-telegram-bot
+python-telegram-bot>=20.0
 
 # Premium feature dependencies
 PyJWT>=2.8.0
@@ -42,11 +41,6 @@ openpyxl>=3.1.0
 gspread>=5.12.0
 oauth2client>=4.1.3
 
-# WhatsApp Bot dependencies (WAHA + n8n integration)
-aiohttp>=3.8.0
-fastapi>=0.104.0
-uvicorn>=0.24.0
-
-# Marimo interactive dashboard dependencies
-marimo>=0.9.0
-flask>=3.0.0
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0

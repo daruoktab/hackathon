@@ -1,15 +1,17 @@
-# Invoice RAG Documentation
+# UrFinance - Your Friendly Expense Tracker
 
-Welcome to the Invoice RAG project documentation! This guide will help you navigate all available documentation resources.
+Welcome to the UrFinance project documentation! This guide will help you navigate all available documentation resources.
 
 ## 📚 Quick Links
 
 ### Getting Started
+
 - **[Setup Guide](SETUP.md)** - Complete installation and configuration instructions
 - **[Features Overview](FEATURES.md)** - Comprehensive list of all features and capabilities
 - **[Quick Reference](QUICK_REFERENCE.md)** - Fast reference for common commands and operations
 
 ### User Guides
+
 - **[User Workflows](USER_WORKFLOWS.md)** - Step-by-step workflows for common tasks
 - **[Workflow Overview](WORKFLOW_OVERVIEW.md)** - High-level overview of system workflows
 - **[Google Sheets Setup](GOOGLE_SHEETS_SETUP.md)** - How to configure Google Sheets integration
@@ -17,6 +19,7 @@ Welcome to the Invoice RAG project documentation! This guide will help you navig
 ## 📖 Detailed Guides
 
 ### [guides/](guides/)
+
 - **[Dashboard Guide](guides/DASHBOARD_GUIDE.md)** - Using the dashboard for visualization and analysis
 - **[Export Guide](guides/EXPORT_GUIDE.md)** - Exporting data to spreadsheets (Excel and Google Sheets)
 - **[Testing Guide](guides/TESTING_GUIDE.md)** - Running tests and understanding the test suite
@@ -24,6 +27,7 @@ Welcome to the Invoice RAG project documentation! This guide will help you navig
 ## 🔧 Troubleshooting
 
 ### [troubleshooting/](troubleshooting/)
+
 - **[DNS Fix Guide](troubleshooting/DNS_FIX.md)** - Resolving DNS and network issues
 - **[Supabase Network Fix](troubleshooting/SUPABASE_NETWORK_FIX.md)** - Fixing Supabase connection problems
 - **[Final Supabase Solution](troubleshooting/FINAL_SUPABASE_SOLUTION.md)** - Complete Supabase troubleshooting guide
@@ -31,7 +35,9 @@ Welcome to the Invoice RAG project documentation! This guide will help you navig
 ## 📦 Archive
 
 ### [archive/](archive/)
+
 Historical documentation and project status reports:
+
 - **[Project Status](archive/PROJECT_STATUS.md)** - Historical project status
 - **[Project Complete](archive/PROJECT_COMPLETE.md)** - Project completion documentation
 - **[Database Restructure Analysis](archive/DATABASE_RESTRUCTURE_ANALYSIS.md)** - Database reorganization details
@@ -58,6 +64,7 @@ invoice_rag/
 ## 🤝 Contributing
 
 When contributing to the project:
+
 1. Follow the existing code structure
 2. Add tests for new features in `tests/`
 3. Update relevant documentation in `docs/`
@@ -66,6 +73,7 @@ When contributing to the project:
 ## 📧 Support
 
 For issues or questions:
+
 - Check the [Troubleshooting](troubleshooting/) guides
 - Review [Quick Reference](QUICK_REFERENCE.md) for common operations
 - Consult specific feature guides in [guides/](guides/)
