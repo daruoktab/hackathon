@@ -8,9 +8,36 @@ def get_db_path():
     current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(current_dir, 'invoices.db')
 
+def get_db_connection():
+    """Get database connection - supports both SQLite and Supabase"""
+    try:
+        from src.db_config import get_raw_connection
+        return get_raw_connection()
+    except ImportError:
+        return sqlite3.connect(get_db_path())
+
+def get_placeholder():
+    """Get SQL parameter placeholder for current database"""
+    try:
+        from src.db_config import USE_SUPABASE
+        return "%s" if USE_SUPABASE else "?"
+    except ImportError:
+        return "?"
+
 def init_spending_limits_table():
     """Initialize the spending limits table in the database."""
-    conn = sqlite3.connect(get_db_path())
+    # Skip initialization for Supabase - table already exists from schema
+    try:
+        from src.db_config import USE_SUPABASE
+        if USE_SUPABASE:
+            print("ℹ️  Using Supabase - spending_limits table already exists")
+            return  # Table already created in Supabase via create_schema.sql
+    except ImportError:
+        pass
+    
+    # Only initialize for SQLite
+    print("ℹ️  Initializing spending_limits table for SQLite...")
+    conn = get_db_connection()
     try:
         cursor = conn.cursor()
         cursor.execute('''
@@ -27,16 +54,35 @@ def init_spending_limits_table():
 
 def set_monthly_limit(user_id: int, limit_amount: float) -> bool:
     """Set or update monthly spending limit for a user."""
-    conn = sqlite3.connect(get_db_path())
+    conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO spending_limits (user_id, monthly_limit, updated_at)
-            VALUES (?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(user_id) DO UPDATE SET
-                monthly_limit = excluded.monthly_limit,
-                updated_at = CURRENT_TIMESTAMP
-        ''', (user_id, limit_amount))
+        placeholder = get_placeholder()
+        
+        # Use appropriate UPSERT syntax
+        try:
+            from src.db_config import USE_SUPABASE
+            is_postgres = USE_SUPABASE
+        except ImportError:
+            is_postgres = False
+        
+        if is_postgres:
+            cursor.execute(f'''
+                INSERT INTO spending_limits (user_id, monthly_limit, updated_at)
+                VALUES ({placeholder}, {placeholder}, CURRENT_TIMESTAMP)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    monthly_limit = EXCLUDED.monthly_limit,
+                    updated_at = CURRENT_TIMESTAMP
+            ''', (user_id, limit_amount))
+        else:
+            cursor.execute(f'''
+                INSERT INTO spending_limits (user_id, monthly_limit, updated_at)
+                VALUES ({placeholder}, {placeholder}, CURRENT_TIMESTAMP)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    monthly_limit = excluded.monthly_limit,
+                    updated_at = CURRENT_TIMESTAMP
+            ''', (user_id, limit_amount))
+        
         conn.commit()
         return True
     except Exception:
@@ -46,10 +92,11 @@ def set_monthly_limit(user_id: int, limit_amount: float) -> bool:
 
 def get_monthly_limit(user_id: int) -> Optional[float]:
     """Get the monthly spending limit for a user."""
-    conn = sqlite3.connect(get_db_path())
+    conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute('SELECT monthly_limit FROM spending_limits WHERE user_id = ?', (user_id,))
+        placeholder = get_placeholder()
+        cursor.execute(f'SELECT monthly_limit FROM spending_limits WHERE user_id = {placeholder}', (user_id,))
         result = cursor.fetchone()
         return result[0] if result else None
     finally:

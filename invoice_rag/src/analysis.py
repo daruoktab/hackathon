@@ -9,8 +9,21 @@ def get_db_path():
     return os.path.join(current_dir, 'invoices.db')
 
 def get_db_connection():
-    """Get database connection"""
-    return sqlite3.connect(get_db_path())
+    """Get database connection - supports both SQLite and Supabase"""
+    try:
+        from src.db_config import get_raw_connection
+        return get_raw_connection()
+    except ImportError:
+        # Fallback to SQLite
+        return sqlite3.connect(get_db_path())
+
+def get_placeholder():
+    """Get SQL parameter placeholder for current database"""
+    try:
+        from src.db_config import USE_SUPABASE
+        return "%s" if USE_SUPABASE else "?"
+    except ImportError:
+        return "?"
 
 def analyze_invoices(weeks_back: int | None = None):
     """Analyze invoices and return summary statistics for a given period."""
@@ -20,10 +33,12 @@ def analyze_invoices(weeks_back: int | None = None):
 
         params = []
         where_clause = ""
+        placeholder = get_placeholder()
+        
         if weeks_back is not None and weeks_back > 0:
             end_date = datetime.now()
             start_date = end_date - timedelta(weeks=weeks_back)
-            where_clause = "WHERE invoice_date >= ?"
+            where_clause = f"WHERE invoice_date >= {placeholder}"
             params.append(start_date.strftime('%Y-%m-%d'))
 
         # Get basic stats
@@ -112,15 +127,16 @@ def get_weekly_data(weeks_back=4):
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
+        placeholder = get_placeholder()
         
         end_date = datetime.now()
         start_date = end_date - timedelta(weeks=weeks_back)
         
         # Get invoices from the last N weeks
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT id, shop_name, invoice_date, total_amount, transaction_type, processed_at, image_path
             FROM invoices
-            WHERE invoice_date >= ?
+            WHERE invoice_date >= {placeholder}
             ORDER BY invoice_date DESC
         """, (start_date.strftime('%Y-%m-%d'),))
         

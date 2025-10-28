@@ -79,4 +79,7 @@ Thumbs.db
 marimorules.md
 .kilocode/mcp.json
 
-echo "google_credentials.json" >> .gitignore
+# Sensitive credentials (NEVER commit these!)
+google_credentials.json
+*.json.credentials
+*credentials*.json

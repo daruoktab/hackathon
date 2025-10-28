@@ -32,6 +32,11 @@ from telegram_bot.spending_limits import (  # noqa: E402
     check_spending_limit,
 )
 from telegram_bot.visualizations import get_visualization  # noqa: E402
+from telegram_bot.premium import (  # noqa: E402
+    check_premium_access,
+    claim_token,
+)
+from src.database import get_or_create_user, is_user_premium  # noqa: E402
 
 # Ensure imports are recognized by Pylance
 __all__ = [
@@ -67,15 +72,37 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message:
         return
 
+    # Create or get user record
+    user = update.effective_user
+    user_record = None
+    if user:
+        session = get_db_session()
+        try:
+            user_record = get_or_create_user(session, str(user.id))
+            logger.info(f"User {user.id} started bot - DB ID: {user_record.id}")
+        finally:
+            session.close()
+
     keyboard = [
         ['/set_limit', '/check_limit'],
         ['/upload_invoice', '/analysis', '/recent_invoices'],
-        ['/chatmode', '/clear', '/help']
+        ['/premium', '/chatmode', '/clear', '/help']
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     
+    # Check if user has premium
+    premium_status = ""
+    if user and user_record:
+        session = get_db_session()
+        try:
+            if is_user_premium(session, str(user.id)):
+                premium_status = "✨ Premium Active ✨\n\n"
+        finally:
+            session.close()
+    
     welcome_text = (
-        "👋 Hello! I'm your friendly Invoice Helper Bot!\n\n"
+        f"👋 Hello! I'm your friendly Invoice Helper Bot!\n\n"
+        f"{premium_status}"
         "Let me help you keep track of your spending the easy way:\n"
         "📸 Send me a photo of your receipt or invoice\n"
         "📊 See where your money goes with simple charts\n"
@@ -187,9 +214,28 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             os.remove(temp_path)
 
 async def analysis_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Show invoice summary and analysis, then send visualization."""
+    """Show invoice summary and analysis, then send visualization. (Premium feature)"""
     if not update.message or not update.effective_user:
         return
+    
+    user_id = str(update.effective_user.id)
+    
+    # Check premium access
+    session = get_db_session()
+    try:
+        premium_info = check_premium_access(session, user_id)
+        if not premium_info['is_premium']:
+            keyboard = [[InlineKeyboardButton("🎫 Get Premium", callback_data="claim_token")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(
+                "💎 Premium Feature\n\n"
+                "Advanced analytics requires premium access!\n\n"
+                "Click below to unlock:",
+                reply_markup=reply_markup
+            )
+            return
+    finally:
+        session.close()
         
     try:
         from telegram_bot.marimo_integration import create_interactive_dashboard, check_server_health
@@ -913,6 +959,98 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
             # If we can't send the error message, just log it
             logger.error(f"Could not send error message to user: {e}")
 
+async def premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /premium command - Show premium status and claim options."""
+    if not update.message or not update.effective_user:
+        return
+    
+    user_id = str(update.effective_user.id)
+    
+    # Check current premium status
+    session = get_db_session()
+    try:
+        if is_user_premium(session, user_id):
+            await update.message.reply_text(
+                "✨ You already have Premium access! ✨\n\n"
+                "Enjoy your advanced analytics features! 📊"
+            )
+            return
+    finally:
+        session.close()
+    
+    # Show claim token option
+    keyboard = [
+        [InlineKeyboardButton("🎫 Claim Token", callback_data="claim_token")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="cancel_premium")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "💎 Premium Feature\n\n"
+        "Unlock advanced analytics and insights!\n\n"
+        "Premium includes:\n"
+        "• 📊 Advanced spending analysis\n"
+        "• 📈 Trend predictions\n"
+        "• 🎯 Smart budget recommendations\n"
+        "• 📉 Category breakdowns\n\n"
+        "Click below to claim your premium token:",
+        reply_markup=reply_markup
+    )
+
+async def premium_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle premium-related callback queries."""
+    query = update.callback_query
+    if not query or not update.effective_user:
+        return
+    
+    await query.answer()
+    
+    if query.data == "claim_token":
+        # Ask user to send token
+        context.user_data['waiting_for_token'] = True
+        await query.edit_message_text(
+            "🎫 Please send me your premium token.\n\n"
+            "Token format: JWT string (e.g., eyJhbGc...)\n\n"
+            "Send the token as a text message."
+        )
+    
+    elif query.data == "cancel_premium":
+        await query.edit_message_text("Premium activation cancelled.")
+
+async def handle_token_claim(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle token claim when user sends a JWT token."""
+    if not update.message or not update.effective_user:
+        return
+    
+    # Check if we're waiting for a token from this user
+    if not context.user_data.get('waiting_for_token'):
+        return  # Not in token claim flow
+    
+    user_id = str(update.effective_user.id)
+    token = update.message.text.strip()
+    
+    # Clear the waiting state
+    context.user_data['waiting_for_token'] = False
+    
+    # Attempt to claim the token
+    session = get_db_session()
+    try:
+        result = claim_token(session, user_id, token)
+        
+        if result['success']:
+            await update.message.reply_text(
+                f"✅ {result['message']}\n\n"
+                "🎉 Premium activated successfully!\n"
+                "You now have access to advanced analytics. Try /analysis!"
+            )
+        else:
+            await update.message.reply_text(
+                f"❌ {result['message']}\n\n"
+                "Please check your token and try again with /premium"
+            )
+    finally:
+        session.close()
+
 async def main() -> None:
     """Start the bot."""
     import logging
@@ -959,6 +1097,7 @@ async def main() -> None:
     # Add command handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("premium", premium_command))
     application.add_handler(CommandHandler("analysis", analysis_command))
     application.add_handler(CommandHandler("recent_invoices", recent_invoices))
     application.add_handler(CommandHandler("upload_invoice", upload_invoice))
@@ -969,10 +1108,14 @@ async def main() -> None:
     application.add_handler(CommandHandler("chatmode", chatmode_command))
     
     # Handle callback queries (for inline keyboard buttons)
+    application.add_handler(CallbackQueryHandler(premium_callback_handler, pattern="^(claim_token|cancel_premium)$"))
     application.add_handler(CallbackQueryHandler(handle_export_callback))
     
     # Handle photo messages (invoice images)
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    
+    # Handle token claims (before general text handler)
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_token_claim))
     
     # Handle all other text messages with the chatbot
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))

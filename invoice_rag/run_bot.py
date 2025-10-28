@@ -20,8 +20,5 @@ if __name__ == '__main__':
         print("\nBot stopped by user")
     except Exception as e:
         print(f"\nError occurred: {e}")
-    finally:
-        # Ensure all pending tasks are complete
-        pending = asyncio.all_tasks()
-        for task in pending:
-            task.cancel()
+        import traceback
+        traceback.print_exc()
