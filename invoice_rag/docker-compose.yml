@@ -1,70 +1,7 @@
 version: '3.8'
 
 services:
-  # WAHA WhatsApp HTTP API
-  waha:
-    image: devlikeapro/waha
-    container_name: invoice-waha
-    ports:
-      - "3000:3000"
-    environment:
-      - WAHA_WEBHOOK_URL=http://n8n:5678/webhook/whatsapp-invoice-bot
-    volumes:
-      - waha_data:/app/session
-    restart: unless-stopped
-    networks:
-      - invoice-network
-
-  # n8n Workflow Automation
-  n8n:
-    image: n8nio/n8n
-    container_name: invoice-n8n
-    ports:
-      - "5678:5678"
-    environment:
-      - N8N_BASIC_AUTH_ACTIVE=false
-      - N8N_HOST=0.0.0.0
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - NODE_ENV=production
-      - WEBHOOK_URL=http://localhost:5678
-    volumes:
-      - n8n_data:/home/node/.n8n
-      - ./n8n_workflows:/home/node/workflows:ro
-    restart: unless-stopped
-    networks:
-      - invoice-network
-    depends_on:
-      - waha
-
-  # Python Invoice Bot (WhatsApp)
-  whatsapp-bot:
-    build:
-      context: .
-      dockerfile: Dockerfile.whatsapp
-    container_name: invoice-whatsapp-bot
-    ports:
-      - "8000:8000"
-    environment:
-      - GROQ_API_KEY=${GROQ_API_KEY}
-      - WAHA_URL=http://waha:3000
-      - WAHA_API_KEY=${WAHA_API_KEY}
-      - N8N_URL=http://n8n:5678
-      - N8N_WEBHOOK_URL=http://n8n:5678/webhook/whatsapp-invoice-bot
-      - WHATSAPP_SESSION_NAME=${WHATSAPP_SESSION_NAME:-invoice_bot_session}
-      - WHATSAPP_BOT_HOST=0.0.0.0
-      - WHATSAPP_BOT_PORT=8000
-    volumes:
-      - ./database/invoices.db:/app/database/invoices.db
-      - ./dashboard_output:/app/dashboard_output
-    restart: unless-stopped
-    networks:
-      - invoice-network
-    depends_on:
-      - waha
-      - n8n
-
-  # Python Telegram Bot (Optional)
+  # Python Telegram Bot
   telegram-bot:
     build:
       context: .
@@ -77,35 +14,6 @@ services:
       - ./database/invoices.db:/app/database/invoices.db
       - ./dashboard_output:/app/dashboard_output
     restart: unless-stopped
-    networks:
-      - invoice-network
-    profiles:
-      - telegram
-
-  # Streamlit Web App (Optional)
-  streamlit-app:
-    build:
-      context: .
-      dockerfile: Dockerfile.streamlit
-    container_name: invoice-streamlit
-    ports:
-      - "8501:8501"
-    environment:
-      - GROQ_API_KEY=${GROQ_API_KEY}
-    volumes:
-      - ./database/invoices.db:/app/database/invoices.db
-      - ./dashboard_output:/app/dashboard_output
-    restart: unless-stopped
-    networks:
-      - invoice-network
-    profiles:
-      - web
-
-volumes:
-  waha_data:
-    driver: local
-  n8n_data:
-    driver: local
 
 networks:
   invoice-network:

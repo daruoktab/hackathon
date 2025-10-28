@@ -8,8 +8,19 @@ Perfect for personal finance tracking, expense management, and staying on top of
 
 ## 📚 Documentation
 
-- **[USER_WORKFLOWS.md](invoice_rag/USER_WORKFLOWS.md)** - 📱 Detailed user guides with step-by-step workflows and examples
-- **[WORKFLOW_OVERVIEW.md](invoice_rag/WORKFLOW_OVERVIEW.md)** - 🔄 Complete system architecture with visual diagrams
+Complete documentation is now organized in the `docs/` folder:
+
+- **[Documentation Index](invoice_rag/docs/README.md)** - � Main documentation hub
+- **[Setup Guide](invoice_rag/docs/SETUP.md)** - ⚙️ Installation and configuration
+- **[Features Overview](invoice_rag/docs/FEATURES.md)** - ✨ All features and capabilities
+- **[User Workflows](invoice_rag/docs/USER_WORKFLOWS.md)** - 📱 Step-by-step usage guides
+- **[Quick Reference](invoice_rag/docs/QUICK_REFERENCE.md)** - � Fast command reference
+
+**Additional Guides:**
+- [Dashboard Guide](invoice_rag/docs/guides/DASHBOARD_GUIDE.md)
+- [Export Guide](invoice_rag/docs/guides/EXPORT_GUIDE.md)
+- [Testing Guide](invoice_rag/docs/guides/TESTING_GUIDE.md)
+- [Troubleshooting](invoice_rag/docs/troubleshooting/)
 
 ---
 
@@ -53,14 +64,13 @@ Perfect for personal finance tracking, expense management, and staying on top of
 - **💻 Command Line**: Batch processing for power users
   - 🔄 Process multiple invoices at once
   - ⚡ Fast bulk imports
-  - �️ Direct database access
+  - 🖥️ Direct database access
 
 ## 📁 Project Structure
 
 ```
 hackathon/
 ├── README.md                      # This guide
-├── USER_WORKFLOWS.md              # 📱 Detailed user workflow documentation
 └── invoice_rag/                   # Main application
     │
     ├── src/                       # 🧠 Core Logic
@@ -74,18 +84,42 @@ hackathon/
     │   ├── visualizations.py      # Dashboard & chart generation
     │   └── spending_limits.py     # Budget tracking logic
     │
+    ├── database/                  # 💾 Database Storage
+    │   └── invoices.db            # SQLite database
+    │
+    ├── tests/                     # ✅ Test Suite
+    │   ├── conftest.py            # pytest configuration
+    │   ├── test_api.py            # API tests
+    │   ├── test_analysis.py       # Analysis tests
+    │   ├── test_bot.py            # Bot tests
+    │   └── ...                    # More test files
+    │
+    ├── docs/                      # 📚 Documentation
+    │   ├── README.md              # Documentation index
+    │   ├── SETUP.md               # Setup guide
+    │   ├── FEATURES.md            # Features overview
+    │   ├── guides/                # User guides
+    │   ├── troubleshooting/       # Problem-solving
+    │   └── archive/               # Historical docs
+    │
+    ├── migration/                 # 🔄 Database Migration
+    │   ├── migrate.py             # Migration utilities
+    │   └── README.md              # Migration guide
+    │
     ├── invoices/                  # 📸 Invoice images (for CLI batch processing)
     │
-    ├── requirements.txt           # � Python dependencies
-    ├── .env.example               # � Configuration template
+    ├── requirements.txt           # 📦 Python dependencies
+    ├── .env.example               # 🔑 Configuration template
     ├── run_bot.py                 # ▶️ Start Telegram bot
     ├── run.py                     # ▶️ Batch process invoices
-    └── invoices.db                # 💾 SQLite database
+    ├── cleanup.py                 # 🧹 Database cleanup utility
+    ├── backup_database.py         # 💾 Database backup utility
+    └── check_database.py          # 🔍 Database inspection tool
 ```
 
-## � User Workflows
+## 📚 User Workflows
 
-For detailed step-by-step workflows with visual diagrams, see **[USER_WORKFLOWS.md](invoice_rag/USER_WORKFLOWS.md)**
+For detailed step-by-step workflows with visual diagrams, see **[docs/USER_WORKFLOWS.md](invoice_rag/docs/USER_WORKFLOWS.md)**
 
 ### Quick Overview
 
